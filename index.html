@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELEVATOR</title>
+<meta name="description" content="엘리베이터 안내원 아케치와 10층에서 1층까지. 이상한 점이 보이면 비상벨을 누르십시오. 페르소나5 2차 창작 비공식 팬게임.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ELEVATOR">
+<meta property="og:description" content="이상한 점이 보이면, 비상벨을 누르십시오. 페르소나5 2차 창작 비공식 팬게임.">
+<meta property="og:image" content="https://youa1037-tech.github.io/elevator/og.png">
+<meta property="og:url" content="https://youa1037-tech.github.io/elevator/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://youa1037-tech.github.io/elevator/og.png">
+<meta name="theme-color" content="#000000">
+<style>
+/* VOICE: 조용하고 서늘한 접객 톤, 연옥의 엘리베이터
+   IDEA: 낡은 호텔 엘리베이터 한 칸, 화면 = 엘리베이터 안, 360도로 둘러봄
+   PICTURE: Blender 파노라마 + 3D 공간에 선 도트 아케치, 말풍선과 실물 패널
+   COLOUR and TYPE: 검정·놋쇠 앰버, 위험은 붉은색 / Galmuri11 도트 폰트
+   LAYOUT: 390×844 세로 무대를 화면에 맞춰 확대·축소 */
+@font-face{font-family:'Galmuri11';src:url('assets/Galmuri11.woff2') format('woff2');font-display:swap}
+:root{color-scheme:dark;--amber:#f2b84b;--red:#ff5a52}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:#050507;overflow:hidden}
+body{font-family:'Galmuri11',monospace;color:#fff;-webkit-tap-highlight-color:transparent;user-select:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;width:390px;height:844px;overflow:hidden;background:#000;flex:none;transform-origin:center}
+#gl{position:absolute;inset:0;width:390px;height:844px;image-rendering:pixelated}
+#vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 75% 60% at 50% 50%,rgba(0,0,0,0) 55%,rgba(0,0,0,.65) 100%)}
+#grain{position:absolute;inset:0;width:390px;height:844px;opacity:.6;mix-blend-mode:overlay;pointer-events:none}
+#tap{position:absolute;inset:0;touch-action:none;cursor:grab}
+#tap:active{cursor:grabbing}
+#ind{position:absolute;display:flex;align-items:center;justify-content:center;color:var(--amber);text-shadow:0 0 8px rgba(242,184,75,.8);pointer-events:none;white-space:nowrap}
+#ind.red{color:var(--red);text-shadow:0 0 8px rgba(255,90,80,.85)}
+.hs{position:absolute;background:none;border:0;padding:0;cursor:pointer;border-radius:8px}
+.hs:focus-visible{outline:2px solid var(--amber)}
+#bclose.hot{box-shadow:0 0 0 2px rgba(255,210,122,.9),0 0 16px 4px rgba(255,210,122,.7);animation:pulse .5s infinite alternate}
+@keyframes pulse{to{box-shadow:0 0 0 2px rgba(255,210,122,1),0 0 24px 8px rgba(255,210,122,.95)}}
+.box{position:absolute;left:18px;width:354px;padding:16px 18px 22px;background:#0c0c10;border:2px solid #fff;border-radius:16px;font-size:15px;line-height:1.65;white-space:pre-wrap}
+#bubble{top:40px}
+#bubble::after{content:'';position:absolute;left:var(--tail,92px);bottom:-11px;width:18px;height:18px;background:#0c0c10;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg)}
+#bubble.away::after{display:none}
+#bubble.crack{border-radius:16px 13px 18px 11px;transform:rotate(-.8deg)}
+#narr{top:40px;background:rgba(6,6,8,.9);border-color:#77787f;color:#cfd0d6}
+#voice{top:250px;left:120px;width:240px;border-color:var(--red);color:#ffb3ad;background:rgba(20,4,6,.9)}
+.next{position:absolute;right:14px;bottom:6px;font-size:11px;color:var(--amber);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+#timer{margin-top:10px;height:4px;border-radius:2px;background:#3a1d20;overflow:hidden;display:none}
+#timer i{display:block;height:100%;width:100%;background:var(--red)}
+#hs-icm.ring::after{content:'';position:absolute;right:6px;top:6px;width:8px;height:8px;border-radius:50%;background:#ff3b2f;box-shadow:0 0 10px #ff3b2f;animation:pulse .4s infinite alternate}
+#choices{position:absolute;left:28px;right:28px;bottom:36px;display:flex;flex-direction:column;gap:10px}
+#choices button{min-height:48px;padding:10px 16px;background:rgba(12,12,16,.92);border:2px solid #fff;border-radius:12px;color:#fff;font:15px/1.4 'Galmuri11',monospace;text-align:left;cursor:pointer}
+#choices button:hover,#choices button:focus-visible{background:#26262e;outline:none}
+#toast{position:absolute;left:50%;transform:translateX(-50%);top:560px;max-width:340px;width:max-content;padding:8px 14px;border-radius:10px;background:rgba(0,0,0,.72);text-align:center;font-size:13px;line-height:1.5;color:#e6e6ea;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.on{opacity:1}
+#stage.outside .hs,#stage.outside #ind{visibility:hidden!important}
+#ind.melt{animation:melt 2.2s steps(11) infinite;color:#ff6a5a}
+@keyframes melt{0%{transform:none;filter:none}35%{transform:skewX(9deg) scaleY(1.3) translateY(3px);filter:blur(.5px)}70%{transform:skewX(-7deg) scaleY(1.7) translateY(7px);filter:blur(1px)}100%{transform:scaleY(1.15) translateY(2px)}}
+#insert{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding-top:96px;pointer-events:none;background:radial-gradient(ellipse at 50% 34%,rgba(0,0,0,.55),rgba(0,0,0,.88) 70%);animation:fadein .6s ease-out}
+#insert.hide{display:none}
+#insert img{width:min(210px,54vw);image-rendering:pixelated;filter:drop-shadow(0 0 14px #000)}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+#rules.stain .paper{background-image:radial-gradient(ellipse 30px 19px at 86% 12%,rgba(110,70,30,.14),rgba(110,70,30,.07) 60%,transparent 72%)}
+#rules.deep .paper{background-image:radial-gradient(ellipse 34px 22px at 86% 12%,rgba(110,70,30,.34),rgba(110,70,30,.18) 60%,transparent 72%)}
+#choices button.urge{border-color:var(--amber);color:var(--amber);animation:urge 1.6s ease-in-out infinite}
+@keyframes urge{50%{box-shadow:0 0 14px rgba(242,184,75,.45)}}
+#stage .hs.press{animation:ring .28s ease-out}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,236,190,.85)}100%{box-shadow:0 0 0 14px rgba(255,236,190,0)}}
+#ind.blip{animation:indblip .35s ease-out}
+@keyframes indblip{0%{filter:brightness(2.2)}100%{filter:none}}
+#choices button{transition:transform .08s,background .15s}
+#choices button.press,#choices button:active{transform:scale(.97);background:#2e2e38}
+.turn:active{transform:scale(.94)}
+#hs-ak{pointer-events:none}
+#rbub{position:absolute;max-width:220px;padding:8px 12px;background:#0c0c10;border:2px solid #fff;border-radius:12px;font-size:13px;line-height:1.5;transform:translate(-50%,-100%);pointer-events:none;white-space:pre-wrap}
+#rbub.far{transform:translate(-50%,0)}#rbub.far::after{display:none}
+.lastrec{margin-top:8px;border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:8px 10px}.lastrec summary{cursor:pointer;color:var(--amber)}.lastrec p{margin:8px 0 0;white-space:pre-wrap;word-break:keep-all;font-size:13px;line-height:1.8;color:#cfd0d6}
+#rbub::after{content:'';position:absolute;left:50%;bottom:-8px;width:12px;height:12px;margin-left:-6px;background:#0c0c10;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(45deg)}
+#gl{filter:saturate(.92) contrast(1.04)}
+#gl.mono{filter:grayscale(1) contrast(1.15)}
+#stage.static #grain{opacity:1;mix-blend-mode:screen;animation:jit .12s steps(2) infinite}
+#stage.static #gl{animation:tear .3s steps(3) infinite}
+@keyframes tear{0%{transform:none;filter:contrast(1.4) brightness(1.15)}33%{transform:translateX(5px) skewX(-1.5deg)}66%{transform:translateX(-4px);filter:contrast(1.2) brightness(.85)}}
+@keyframes jit{50%{transform:translate(-6px,3px)}}
+#compass{position:absolute;left:0;right:0;top:8px;text-align:center;font-size:11px;color:#8b8c94;letter-spacing:2px;pointer-events:none}
+.turn{position:absolute;top:572px;width:40px;height:60px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.35);color:#fff;font:16px 'Galmuri11',monospace;cursor:pointer}
+#turnL{left:0;border-left:0;border-radius:0 10px 10px 0}#turnR{right:0;border-right:0;border-radius:10px 0 0 10px}
+.turn:focus-visible{outline:2px solid var(--amber)}
+#black{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 1.2s}
+#white{position:absolute;inset:0;background:#fbfbf8;opacity:0;pointer-events:none;transition:opacity 1.4s}
+#whisper{position:absolute;left:24px;right:24px;top:42%;text-align:center;font-size:17px;letter-spacing:1px;color:#5a5b62;opacity:0;transition:opacity .9s;pointer-events:none}
+#wcard{position:absolute;inset:0;z-index:40;background:#fbfbf8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center;color:#2a2b30}
+#wcard.hide{display:none}
+#wcard p{margin:0;font-size:16px;line-height:1.9;opacity:0;transition:opacity 1.8s}
+#wcard p.on{opacity:1}
+#wcard p.cr{font-size:13px;color:#8b8c94}
+#wcard p.big{font-size:22px;letter-spacing:4px;color:#b08a3a}
+#flash{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .18s}
+.full{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:40px;background:#000}
+#title.live{background:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.6) 40%,rgba(0,0,0,.9) 75%)}
+#stage.attract .turn,#stage.attract #compass{visibility:hidden}
+#tind.rest{color:#f4efe0;text-shadow:0 0 8px rgba(255,240,210,.6);border-color:#4a4436}
+#tind{font:400 14px Galmuri11,monospace;color:#ff8a3a;letter-spacing:3px;padding:4px 10px;background:#140a06;border:1px solid #3a2414;border-radius:4px;text-shadow:0 0 8px rgba(255,120,40,.8)}
+#tlogo{cursor:default;user-select:none;-webkit-user-select:none}
+.trow{display:flex;gap:10px}.trow .btn{flex:1}
+.btn.small{min-height:40px;padding:6px 10px;font-size:13px}
+.btn.hide,#tstart.hide{display:none}
+#title .credit{position:absolute;bottom:28px;left:0;right:0}
+#sheet{z-index:5}
+#sheet .paper{width:100%;max-height:86%;overflow:auto;background:#16161b;border:2px solid #fff;border-radius:14px;padding:20px 18px;font-size:14px;line-height:1.6;color:#e6e6ea}
+#sheet h3{margin:0 0 12px;font:400 16px Galmuri11,monospace;color:var(--amber)}
+#sheet .btn{width:100%;margin-top:14px}
+#sheet ol.notice{margin:0;padding-left:20px;font-size:13px;line-height:1.55}#sheet ol.notice li{margin:0 0 8px;word-break:keep-all}
+#sheet #shclose{position:sticky;bottom:0;box-shadow:0 -10px 14px 4px #16161b}#sheet ol.notice b{color:var(--amber);font-weight:400}
+.srow{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.srow>span{font-size:13px;color:#b9bac2}
+.seg{display:flex;gap:6px}.seg button{flex:1;min-height:40px;background:#0c0c10;border:1px solid #55565e;border-radius:10px;color:#cfd0d6;font:13px Galmuri11,monospace;cursor:pointer}
+.seg button.on{border-color:var(--amber);color:var(--amber);background:#221a0c}
+.erow{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #2a2a32}
+.erow b{font-weight:400;color:var(--amber)}.erow.locked b{color:#55565e}.erow small{color:#8b8c94;text-align:right}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tgrid button{min-height:42px;background:#0c0c10;border:1px solid #55565e;border-radius:10px;color:#fff;font:13px Galmuri11,monospace;cursor:pointer}
+#sheet select{width:100%;min-height:40px;background:#0c0c10;color:#fff;border:1px solid #55565e;border-radius:10px;font:13px Galmuri11,monospace;padding:0 8px}
+#tbadge{display:none;position:absolute;top:26px;left:0;right:0;margin:auto;width:52px;text-align:center;font:10px Galmuri11,monospace;color:#000;background:#f2b84b;border-radius:4px;pointer-events:none;z-index:6}
+#stage.testing #tbadge{display:block}
+#end small{color:#8b8c94;font-size:12px;white-space:pre}
+#end .ebtns{display:flex;flex-direction:column;gap:10px;width:240px}
+#end.appear{animation:fadein 1.2s ease-out}
+/* text FX adapted from animata.design (MIT): glitch ghosts, scramble-resolve, focus-blur, vertical tiles */
+.glitch{display:inline-grid}
+.glitch>span{grid-area:1/1}
+.glitch .gbase{position:relative;z-index:2}
+.glitch .ga,.glitch .gb{mix-blend-mode:screen;opacity:.9;pointer-events:none}
+.glitch .ga{color:#cd2d37;animation:gA 2.6s infinite steps(1)}
+.glitch .gb{color:#7fc4c4;animation:gB 2.6s infinite steps(1)}
+@keyframes gA{0%,88%{transform:none}90%{transform:translate(-.1em,.03em)}92%{transform:translate(.08em,-.03em)}94%{transform:translate(-.03em,0)}96%{transform:translate(.02em,.01em)}100%{transform:none}}
+@keyframes gB{0%,86%{transform:none}88%{transform:translate(.1em,-.03em)}91%{transform:translate(-.08em,.03em)}93%{transform:translate(.03em,0)}95%{transform:translate(-.02em,0)}100%{transform:none}}
+#stage.calm .glitch .ga,#stage.calm .glitch .gb{animation:none;opacity:0}
+#tiles{position:absolute;inset:0;z-index:20;pointer-events:auto;overflow:hidden}
+#tiles i{position:absolute;top:0;height:100%;background:#0a0a0d;border-left:1px solid #17171c;will-change:transform}
+#title h1{margin:0;font:400 40px 'Galmuri11',monospace;letter-spacing:6px;color:var(--amber);text-shadow:0 0 12px rgba(242,184,75,.6)}
+#title p{margin:0;color:#8b8c94;font-size:13px}
+#tmenu{display:flex;flex-direction:column;gap:10px;align-items:stretch;width:240px}
+#tmenu.hide{display:none}
+#trec{margin:0 0 4px;color:#8b8c94;font-size:12px;text-align:center;line-height:1.7;white-space:pre-line}
+.btn.ghost{border-color:#55565e;color:#b9bac2}
+.btn.warn{border-color:#c0392b;color:#ff8a7a;font-size:13px}
+#title .start{animation:blink 1.4s steps(2) infinite;color:#fff;font-size:15px}
+#death{background:rgba(0,0,0,.92)}
+#death h2{margin:0;color:var(--red);font:400 22px 'Galmuri11',monospace}
+#death small{color:#8b8c94;font-size:13px}
+.btn{min-height:48px;padding:10px 22px;background:#0c0c10;border:2px solid #fff;border-radius:12px;color:#fff;font:15px 'Galmuri11',monospace;cursor:pointer}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:24px}
+#rules .paper{width:100%;background:#e8e0c6;border:4px solid #8a6d2f;color:#2a2418;padding:20px 18px;font-size:13px;line-height:1.75}
+#rules h3{margin:0 0 10px;text-align:center;font:400 16px 'Galmuri11',monospace}
+#rules ol{margin:0 0 16px;padding-left:22px}
+#rules .btn{width:100%;background:#2a2418;border-color:#2a2418;color:#e8e0c6}
+#note .paper{width:100%;background:#16161b;border:2px solid #fff;border-radius:14px;padding:20px 18px;font-size:14px;line-height:1.75;white-space:pre-wrap}
+#note .btn{width:100%;margin-top:14px}
+#end table{border-collapse:collapse;font-size:14px}
+#end td{padding:6px 12px;border-bottom:1px solid #333}
+#end td+td{text-align:right;color:var(--amber)}
+.hide{display:none!important}
+#silent{background:#000}
+#sline{margin:0;font-size:18px;letter-spacing:4px;line-height:1.8;color:#e6e6ea}
+#sound{top:8px;left:8px;right:auto;width:auto;height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:10px;font-size:12px}
+#check{top:8px;right:8px;left:auto;width:auto;height:34px;padding:0 12px;border:1px solid rgba(255,255,255,.35);border-radius:10px;font-size:12px}
+#check.hot,#bbell.hot{box-shadow:0 0 0 2px rgba(255,210,122,.9),0 0 16px 4px rgba(255,210,122,.7);animation:pulse .5s infinite alternate}
+#sexp{margin:0;max-width:300px;font-size:13px;line-height:1.7;color:var(--amber)}
+#sfound{width:min(300px,86vw);text-align:left}
+#sfound .dexh{margin:6px 0 4px;font-size:12px;color:#b9bac2;letter-spacing:1px}
+#sfound ul{margin:0;padding:0 0 0 16px;max-height:120px;overflow:auto;font-size:12px;line-height:1.6;color:#e6e6ea}
+#sfound b{font-weight:400;color:#000;background:var(--amber);border-radius:3px;padding:0 4px;font-size:10px}
+#sfound .dexp{margin:8px 0 0;font-size:12px;color:var(--amber);text-align:center}
+.sh4{margin:14px 0 4px;font:400 14px Galmuri11,monospace;color:#e6e6ea}
+.dexnote{margin:0 0 6px;font-size:11px;color:#8b8c94}
+.dexlist{margin:0;padding-left:22px;font-size:12px;line-height:1.65}
+.dexlist .got{color:#e6e6ea}.dexlist .miss{color:#6c6d75}.dexlist .miss small{color:#a0503f}.dexlist .lock{color:#3a3b42}
+#ssub{color:#6c6d75;font-size:12px;letter-spacing:1px}
+#rules .hand{display:block;margin:2px 0 4px 6px;color:#24408e;font-size:12px;transform:rotate(-2deg)}
+#rules .hand i{font-style:normal;color:#24408e}
+#rules .hand img.jk{width:15px;height:20px;image-rendering:pixelated;vertical-align:-5px;margin-left:3px;transform:rotate(-12deg)}
+#stage .hs.lit{box-shadow:none;background:radial-gradient(circle at 50% 50%,rgba(255,236,190,.95) 0 22%,rgba(255,176,84,.6) 38%,rgba(255,150,60,.18) 58%,transparent 72%);mix-blend-mode:screen}
+#gl.flicker{animation:flick 2.3s infinite}
+@keyframes flick{0%,100%{filter:none}44%{filter:none}45%{filter:brightness(.45)}47%{filter:none}79%{filter:none}80%{filter:brightness(.65)}82%{filter:none}}
+#bubble.overflow #btext{white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+<canvas id="gl" width="390" height="844" aria-label="엘리베이터 안, 문 앞에 선 안내원 아케치"></canvas>
+<div id="vig"></div>
+<img id="grain" src="assets/grain.png" alt="">
+<div id="tap"></div>
+<div id="ind">13F</div>
+<button class="hs" id="hs-ak" aria-label="아케치에게 말 걸기"></button>
+<button class="hs" id="plaque" aria-label="탑승 수칙 읽기"></button>
+<button class="hs" id="b1f" aria-label="1층 버튼"></button>
+<button class="hs" id="bopen" aria-label="열림 버튼"></button>
+<button class="hs" id="bclose" aria-label="닫힘 버튼"></button>
+<button class="hs" id="bbell" aria-label="비상벨"></button>
+<button class="hs" id="hs-scr" aria-label="벽의 자국 살펴보기"></button>
+<button class="hs" id="hs-icm" aria-label="비상 통화 장치 살펴보기"></button>
+<button class="hs" id="hs-cert" aria-label="안전검사 필증 살펴보기"></button>
+<button class="turn" id="turnL" aria-label="왼쪽으로 돌아보기">◀</button>
+<button class="turn" id="turnR" aria-label="오른쪽으로 돌아보기">▶</button>
+<div id="compass">정면</div>
+<button class="turn" id="sound" aria-label="설정 열기">설정</button>
+<button class="turn" id="check" aria-label="점검표 보기">점검표</button>
+<div id="flash"></div>
+<div id="black"></div><div id="white"></div><div id="whisper"></div><div id="wcard" class="hide"></div>
+<div id="insert" class="hide"><img src="assets/m2.png" alt="장갑을 벗은 손. 화약 그을음과 피멍, 그리고 픽셀이 뜯겨 나간 검은 구멍."></div>
+<div class="box hide" id="narr"></div>
+<div class="box hide" id="voice"></div>
+<div class="box hide" id="bubble"><span id="btext"></span><div id="timer"><i></i></div></div>
+<div id="choices"></div>
+<div id="toast"></div>
+<div id="rbub" class="hide"></div>
+<div id="rules" class="modal hide"><div class="paper"><h3>탑승 수칙</h3><ol id="rlist"></ol><button class="btn" id="rclose">닫기</button></div></div>
+<div id="note" class="modal hide"><div class="paper"><span id="ntext"></span><button class="btn" id="nclose">닫기</button></div></div>
+<div class="full hide" id="silent"><p id="sline"></p><p id="sexp"></p><div id="sfound"></div><small id="ssub"></small><button class="btn" id="sretry">다시 탑승한다</button></div>
+<div class="full hide" id="end"><small id="elabel"></small><h2 id="etitle" style="margin:0;font:400 20px Galmuri11,monospace;color:var(--amber)"></h2><p id="etext" style="margin:0;color:#cfd0d6;font-size:14px;line-height:1.8;white-space:pre-wrap"></p><small id="estat"></small><div class="ebtns"><button class="btn" id="again">다시 탑승한다</button><button class="btn ghost" id="eback">타이틀로</button></div></div>
+<div class="full" id="title"><div id="tind">▼ 13F</div><h1 id="tlogo">ELEVATOR</h1><p class="start" id="tstart">불러오는 중…</p><div id="tmenu" class="hide"><p id="trec"></p><button class="btn" id="tcont">이어하기</button><button class="btn ghost" id="tnew">처음부터</button><div class="trow"><button class="btn ghost small" id="trecords">기록</button><button class="btn ghost small" id="tset">설정</button><button class="btn ghost small" id="tnotice">안내</button></div><button class="btn ghost small hide" id="ttest">테스트 메뉴</button></div><p class="credit">made by @nyamaker<br><span style="font-size:11px;opacity:.7">페르소나5 2차 창작 비공식 팬게임 (아틀러스와 무관)</span></p></div>
+<div id="sheet" class="modal hide"><div class="paper"><h3 id="shtitle"></h3><div id="shbody"></div><button class="btn" id="shclose">닫기</button></div></div>
+<div id="tbadge">TEST</div>
+<div id="tiles" hidden></div>
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+{
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+let stageScale = 1;
+const fit = () => { stageScale = Math.min(innerWidth / 390, innerHeight / 844); stage.style.transform = `scale(${stageScale})`; renderer && renderer.setPixelRatio(Math.min(2, stageScale * devicePixelRatio)); };
+let renderer = null;
+
+// ===== 3D: panorama sphere + Akechi standing in the cabin =====
+// Blender coords (camera at origin, forward +y, right +x, up +z) -> three (forward -x, right -z, up +y)
+const T = (x, y, z) => new THREE.Vector3(-(y + 1.3), z - 1.45, -x);
+renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false });
+renderer.setSize(390, 844, false);
+fit(); addEventListener('resize', fit);
+const scene3 = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(80, 390 / 844, 0.05, 200);
+const loader = new THREE.TextureLoader();
+const px = t => { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t; };
+const tex = {};
+const names = ['closed', 'studio', 'red', 'hall', 'lobby'];
+let pending = 0;
+const load = (key, url) => { pending++; tex[key] = px(loader.load(url, () => { if (--pending === 0) ready(); })); };
+for (const n of names) { load('pano_' + n, `assets/pano_${n}.jpg`); tex['pano_' + n].wrapS = THREE.RepeatWrapping; }
+load('ak', 'assets/m1.png');
+load('shadow', 'assets/m3.png');
+// Akechi sheets: 4 cells (base, breathe-up, blink, blink+up), 350px wide with a 2px gutter
+// one atlas for every lighting of Akechi: 4 sheets per row, 2 cells each (base, breathe-up), 2px gutters
+const AT_W = 2816, AT_H = 1480, CELL_W = 350, CELL_STEP = 352, CELL_H = 740;
+const AK = { closed: [0, 0], hall: [1, 0], studio: [2, 0], red: [3, 0], lobby: [0, 1], mirror: [1, 1], exit: [2, 1] };
+tex.ak.repeat.set(CELL_W / AT_W, CELL_H / AT_H);
+let akSheet = 'closed';
+// map-changing anomaly panoramas: loaded in the background, awaited only if needed
+const MAPS = ['redwater', 'wall', 'void', 'flood', 'upside', 'mannequin', 'hands', 'plaqueflip', 'feet', 'green', 'tiles', 'darkceil', 'halfdoor', 'opposite', 'longhall', 'openend', 'person', 'person2', 'hole', 'goldframe', 'noscratch', 'blankplaque', 'extrabutton', 'nohandrail'];
+const lazy = {};
+const AKX = ['mirror', 'exit']; // basement scenes that bring their own Akechi sheet
+function ensureScene(name) {
+  const p = [ensureTex(name)];
+  return Promise.all(p);
+}
+function preloadBasement() { for (const n of ['mirror', 'exit', 'outside']) ensureScene(n); new Image().src = 'assets/m2.png'; }
+function ensureTex(name) {
+  if (tex['pano_' + name]) return lazy[name] || Promise.resolve();
+  lazy[name] = new Promise(r => { tex['pano_' + name] = px(loader.load(`assets/pano_${name}.jpg`, r, undefined, r)); tex['pano_' + name].wrapS = THREE.RepeatWrapping; });
+  return lazy[name];
+}
+
+// door leaves for the opening/closing slide: cut from the closed panorama (leaf_tex.py) and placed at their Blender
+// positions, clipped to the doorway so they vanish into the wall cavity as they slide
+renderer.localClippingEnabled = true;
+const clipDoor = [new THREE.Plane(new THREE.Vector3(0, 0, 1), 0.5), new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.5)];
+const leaves = ['L', 'R'].map(n => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.496, 2.1), new THREE.MeshBasicMaterial({ map: px(loader.load(`assets/leaf_${n}.png`)), clippingPlanes: clipDoor }));
+  m.rotation.y = Math.PI / 2; m.visible = false; m.renderOrder = -2; scene3.add(m); return m;
+});
+const LEAF_OPEN = 0.47, LEAF_HALF = { halfdoor: 0.2 };
+const NO_SLIDE = ['outside'];
+function setLeaves(off) { leaves.forEach((m, i) => m.position.copy(T((i ? 1 : -1) * (0.25 + off), 1.235, 1.05))); }
+function slideLeaves(from, to, ms) {
+  leaves.forEach(m => { m.visible = true; });
+  const t0 = performance.now();
+  return new Promise(res => {
+    const f = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      setLeaves(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(f); else res();
+    };
+    f();
+  });
+}
+const sphereGeo = new THREE.SphereGeometry(60, 64, 32); sphereGeo.scale(-1, 1, 1);
+const sphere = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial());
+scene3.add(sphere);
+
+// camera-space basis of the original front shot (pitch -4 deg)
+const P = -4 * Math.PI / 180;
+const fwd = new THREE.Vector3(-Math.cos(P), Math.sin(P), 0);
+const right = new THREE.Vector3(0, 0, -1);
+const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+function billboard(d, xc, yc, w, h, map) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w * d, h * d), new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false }));
+  const pos = fwd.clone().multiplyScalar(d).add(right.clone().multiplyScalar(xc * d)).add(up.clone().multiplyScalar(yc * d));
+  m.position.copy(pos);
+  const back = fwd.clone().negate();
+  m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, back));
+  scene3.add(m);
+  return m;
+}
+const TAN = Math.tan(40 * Math.PI / 180);
+const sx = x => (x - 195) / 195 * TAN * 390 / 844, sy = y => (422 - y) / 422 * TAN;
+// Akechi: screen rect x -100..337, y 244..884 in the 390x844 front shot
+// the sprite now runs down to the floor: 740 art rows where the original 512 spanned screen y 244..884
+const AK_ROWS = 740, akUnitH = (sy(244) - sy(884)) * AK_ROWS / 512;
+const akechi = billboard(1.0, (sx(-100) + sx(337)) / 2, sy(244) - akUnitH / 2, sx(337) - sx(-100), akUnitH, null);
+const sw = (sx(337) - sx(-100)) * 1.04 * 430 / 350, sh = (sy(244) - sy(884)) * 1.04 * 592 / 512;
+const shadow = billboard(2.45, (sx(-100) + sx(337)) / 2 + sx(211) , (sy(244) + sy(884)) / 2 + (sy(0) - sy(46)), sw, sh, null);
+shadow.renderOrder = -1; akechi.renderOrder = 1;
+const akBase = { pos: akechi.position.clone() };
+const AKW = akechi.geometry.parameters.width, AKH = akechi.geometry.parameters.height;
+let akRect = null, akHead = null, nudge = 0;
+function placeAkechi() {
+  akechi.updateMatrixWorld();
+  const pt = (fx, fy) => { const v = akechi.localToWorld(new THREE.Vector3(fx * AKW, fy * AKH, 0)).project(cam); return { x: (v.x + 1) / 2 * 390, y: (1 - v.y) / 2 * 844, ok: v.z < 1 }; };
+  const a = pt(-0.3, 0.46), b = pt(0.3, -0.5), hd = pt(0.02, 0.5);
+  akRect = akechi.visible && a.ok && b.ok ? { l: Math.min(a.x, b.x), t: Math.min(a.y, b.y), r: Math.max(a.x, b.x), b: Math.max(a.y, b.y) } : null;
+  akHead = hd.ok ? hd : null;
+  const el = $('hs-ak');
+  if (akRect && akRect.r > 0 && akRect.l < 390) Object.assign(el.style, { visibility: 'visible', left: akRect.l + 'px', top: akRect.t + 'px', width: (akRect.r - akRect.l) + 'px', height: (akRect.b - akRect.t) + 'px' });
+  else el.style.visibility = 'hidden';
+  const rb = $('rbub');
+  if (!rb.classList.contains('hide') && !rb.classList.contains('far') && akHead && akRect) { rb.style.left = Math.max(120, Math.min(270, akHead.x)) + 'px'; rb.style.top = Math.max(akHead.y, akRect.t + (akRect.b - akRect.t) * 0.34) + 'px'; }
+  animateAkechi(performance.now());
+  if (nudge > 0) { nudge = Math.max(0, nudge - 0.08); const k = Math.sin(nudge * Math.PI); akechi.scale.set(akScale * (1 + 0.015 * k), akScale * (1 - 0.01 * k), 1); }
+}
+
+let yaw = 0, pitch = P, frontScene = 'closed';
+const LIM = { min: -10 * Math.PI / 180, max: 22 * Math.PI / 180 };
+function applyScene() {
+  sphere.material.map = tex['pano_' + frontScene]; sphere.material.needsUpdate = true;
+  akSheet = AK[frontScene] ? frontScene : 'hall';
+  if (akechi.material.map !== tex.ak) { akechi.material.map = tex.ak; akechi.material.needsUpdate = true; }
+  shadow.material.map = tex.shadow; shadow.visible = !NOSHADOW.includes(frontScene); shadow.material.needsUpdate = true;
+  akechi.visible = frontScene !== 'outside'; stage.classList.toggle('outside', frontScene === 'outside');
+}
+const NOSHADOW = ['studio', 'mirror', 'exit', 'outside'];
+function setAkSheet(key) { if (AK[key]) akSheet = key; }
+
+// hotspots in Blender coords: corners (tl, br) or center for buttons
+const D1 = 1.2, D0 = -2.4;
+const HS = {
+  plaque: [[0.63, D1 - 0.01, 1.803], [0.89, D1 - 0.01, 1.437]],
+  b1f: [[0.69, 1.17, 1.23], [0.76, 1.17, 1.17]], bopen: [[0.69, 1.17, 1.087], [0.76, 1.17, 1.027]],
+  bclose: [[0.69, 1.17, 0.944], [0.76, 1.17, 0.884]], bbell: [[0.69, 1.17, 0.8], [0.76, 1.17, 0.74]],
+  ind: [[-0.21, D1 - 0.03, 2.46], [0.21, D1 - 0.03, 2.3]],
+  'hs-cert': [[0.24, D0 + 0.02, 1.72], [-0.24, D0 + 0.02, 1.38]],
+  'hs-scr': [[-1.09, -1.0, 1.6], [-1.09, -1.6, 1.2]],
+  'hs-icm': [[1.08, -1.39, 1.47], [1.08, -1.21, 1.23]],
+};
+const v3 = new THREE.Vector3();
+function project(x, y, z) {
+  v3.copy(T(x, y, z)).project(cam);
+  return { x: (v3.x + 1) / 2 * 390, y: (1 - v3.y) / 2 * 844, ok: v3.z < 1 };
+}
+function placeHotspots() {
+  for (const [id, [a, b]] of Object.entries(HS)) {
+    const el = $(id), p = project(...a), q = project(...b);
+    const vis = p.ok && q.ok && Math.max(p.x, q.x) > 0 && Math.min(p.x, q.x) < 390;
+    el.style.visibility = vis ? 'visible' : 'hidden';
+    if (!vis) continue;
+    let l = Math.min(p.x, q.x), t = Math.min(p.y, q.y), w = Math.abs(q.x - p.x), h = Math.abs(q.y - p.y);
+    if (id !== 'ind') { const padW = Math.max(0, 44 - w) / 2, padH = Math.max(0, 26 - h) / 2; l -= padW; t -= padH; w += padW * 2; h += padH * 2; }
+    Object.assign(el.style, { left: l + 'px', top: t + 'px', width: w + 'px', height: h + 'px' });
+    if (id === 'ind') el.style.fontSize = Math.max(9, h * 0.5) + 'px';
+  }
+}
+
+// ---- looking around
+const VNAME = ['정면', '오른쪽', '뒤', '왼쪽'];
+let arriveGrace = 0, canTurn = false, doorOpen = false, epoch = 0, lookedBack = false, turnAnim = null, tutorial = false, warnedBack = false;
+const norm = a => Math.atan2(Math.sin(a), Math.cos(a));
+function frame() {
+  const dir = new THREE.Vector3(Math.cos(yaw) * Math.cos(pitch), Math.sin(pitch), Math.sin(yaw) * Math.cos(pitch));
+  // yaw 0 faces front (-x); positive yaw turns right (-z)
+  cam.position.set(0, 0, 0);
+  cam.lookAt(-dir.x, dir.y, -dir.z);
+  if (settleT && SET.shake) { const t = (performance.now() - settleT) / 420; if (t < 1) cam.rotateX(-0.014 * Math.sin(t * Math.PI) * (1 - t)); else settleT = 0; }
+  if (A_ === 'tilt') cam.rotateZ(0.14);
+  renderer.render(scene3, cam);
+  placeHotspots(); placeAkechi();
+  const y = norm(yaw), deg = y * 180 / Math.PI;
+  const sector = Math.round(((deg % 360) + 360) % 360 / 90) % 4;
+  $('compass').textContent = VNAME[sector];
+  $('bubble').classList.toggle('away', Math.abs(deg) > 25);
+  checkMoved(deg);
+  if (Math.abs(deg) > 120) {
+    if (doorOpen && canTurn && performance.now() > arriveGrace) turnedBack();
+    else if (tutorial && frontScene === 'hall') { if (!warnedBack) { warnedBack = true; show('a', '손님, 문이 열려 있을 때 등을 돌리시는 건 좋지 않습니다. ……수칙 4번, 기억해 두세요.', { wait: false }); } }
+    else if (frontScene === 'outside') { if (!lookedBack) { lookedBack = true; toast('불 꺼진 문이 닫혀 있다. ……아무것도 없다.'); } }
+    else if (canTurn && !lookedBack) { lookedBack = true; toast('등 뒤에서 아케치의 시선이 느껴진다.'); }
+  }
+}
+function loop() {
+  if (camAnim) {
+    const k = Math.min(1, (performance.now() - camAnim.t0) / camAnim.d), e = 1 - (1 - k) ** 3;
+    yaw = camAnim.y0 + (camAnim.y1 - camAnim.y0) * e; pitch = camAnim.p0 + (camAnim.p1 - camAnim.p0) * e;
+    cam.fov = camAnim.f0 + (camAnim.f1 - camAnim.f0) * e; cam.updateProjectionMatrix();
+  }
+  const now = performance.now(), dt = Math.min(0.05, (now - (loop.last || now)) / 1000); loop.last = now;
+  if (titleOn) lookT.yaw += dt * 0.05;
+  if (!turnAnim && !camAnim) { const ease = 1 - Math.exp(-dt * 16); yaw += (lookT.yaw - yaw) * ease; pitch += (lookT.pitch - pitch) * ease; }
+  if (turnAnim) {
+    const k = Math.min(1, (performance.now() - turnAnim.t0) / 350);
+    const e = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+    yaw = turnAnim.from + (turnAnim.to - turnAnim.from) * e;
+    if (k >= 1) turnAnim = null;
+    lookT.yaw = yaw; lookT.pitch = pitch;
+  }
+  frame(); requestAnimationFrame(loop);
+}
+const modalOpen = () => ['rules', 'note', 'sheet'].some(id => !$(id).classList.contains('hide'));
+function turnBy(d) { if (!canTurn || modalOpen()) return; turnAnim = { from: yaw, to: yaw + d * Math.PI / 2, t0: performance.now() }; }
+const lookT = { yaw: 0, pitch: -4 * Math.PI / 180 };
+function resetView() { turnAnim = null; yaw = 0; pitch = P; lookT.yaw = yaw; lookT.pitch = pitch; }
+$('turnL').addEventListener('click', e => { e.stopPropagation(); turnBy(-1); });
+$('turnR').addEventListener('click', e => { e.stopPropagation(); turnBy(1); });
+addEventListener('keydown', e => { if (e.key === 'ArrowLeft') turnBy(-1); else if (e.key === 'ArrowRight') turnBy(1); });
+
+// drag to look, tap to advance
+let drag = null;
+$('tap').addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, yaw: lookT.yaw, pitch: lookT.pitch, moved: false }; $('tap').setPointerCapture(e.pointerId); });
+$('tap').addEventListener('pointermove', e => {
+  if (modalOpen()) { drag = null; return; }
+  if (!drag) return;
+  const dx = (e.clientX - drag.x) / stageScale, dy = (e.clientY - drag.y) / stageScale;
+  if (Math.hypot(dx, dy) > 8) drag.moved = true;
+  if (!drag.moved || !canTurn) return;
+  turnAnim = null;
+  lookT.yaw = drag.yaw - dx * 0.0045;
+  lookT.pitch = Math.max(LIM.min, Math.min(LIM.max, drag.pitch + dy * 0.0035));
+});
+$('tap').addEventListener('pointerup', e => {
+  if (drag && !drag.moved) {
+    const r = stage.getBoundingClientRect(), x = (e.clientX - r.left) / stageScale, y = (e.clientY - r.top) / stageScale;
+    if (!tapWait && !typing && akRect && x > akRect.l && x < akRect.r && y > akRect.t && y < akRect.b) poke(); else advance();
+  }
+  drag = null;
+});
+$('tap').addEventListener('pointercancel', () => { drag = null; });
+
+// ===== text & choices =====
+let S = { mask: 3, interest: 0, sleeve: false };
+let tapWait = null, typing = null, panelHook = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function hideBoxes() { for (const id of ['narr', 'voice', 'bubble']) $(id).classList.add('hide'); }
+function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800); }
+function typeInto(el, text, speed = 32, voice = null) {
+  return new Promise(res => {
+    let i = 0; el.textContent = '';
+    if (speed <= 0) { el.textContent = text; typing = null; res(); return; }
+    const id = setInterval(() => { el.textContent = text.slice(0, ++i); if (voice && i % 2 === 0 && text[i - 1] !== ' ') SFX.blip(voice); if (i >= text.length) { clearInterval(id); typing = null; res(); } }, speed);
+    typing = () => { clearInterval(id); el.textContent = text; typing = null; res(); };
+  });
+}
+async function show(who, text, { wait = true, speed, voice } = {}) {
+  hideBoxes();
+  const box = who === 'a' ? $('bubble') : who === 'v' ? $('voice') : $('narr');
+  box.classList.remove('hide');
+  box.querySelector('.next')?.remove();
+  await typeInto(who === 'a' ? $('btext') : box, text, speed ?? Math.round(32 * TEXT_MUL[SET.text]), voice || (who === 'a' ? (basement ? 'low' : 'akechi') : who === 'v' ? 'voice' : null));
+  if (!wait) return;
+  const n = document.createElement('div'); n.className = 'next'; n.textContent = '▼'; box.appendChild(n);
+  await new Promise(r => tapWait = r);
+  n.remove();
+}
+const A = t => show('a', t), N = t => show('n', t), V = t => show('v', t);
+function advance() { if (typing) typing(); else if (tapWait) { const r = tapWait; tapWait = null; r(); } }
+for (const id of ['narr', 'voice', 'bubble']) $(id).addEventListener('click', advance);
+function choose(opts) {
+  return new Promise(res => {
+    const c = $('choices'); c.innerHTML = '';
+    opts.forEach((t, i) => { const b = document.createElement('button'); b.textContent = '▶ ' + t; b.onclick = () => { SFX.button(); buzz(10); b.classList.add('press'); setTimeout(() => { c.innerHTML = ''; res(i); }, 90); }; c.appendChild(b); });
+  });
+}
+async function swapScene(name) {
+  await ensureScene(name);
+  const opening = frontScene === 'closed' && name !== 'closed' && !NO_SLIDE.includes(name);
+  const closing = frontScene !== 'closed' && name === 'closed' && !NO_SLIDE.includes(frontScene);
+  if (opening || closing) {
+    // the doors slide instead of a blink: open = new scene behind the leaves, then part them
+    const lit = (opening ? name : frontScene) === 'red' ? 0xff7a7a : 0xffffff;
+    leaves.forEach(m => m.material.color.set(lit));
+    SFX.door();
+    if (opening) {
+      setLeaves(0); leaves.forEach(m => { m.visible = true; });
+      frontScene = name; applyScene(); ambience(name);
+      await slideLeaves(0, LEAF_HALF[name] ?? LEAF_OPEN, 950);
+    } else {
+      await slideLeaves(LEAF_HALF[frontScene] ?? LEAF_OPEN, 0, 850);
+      frontScene = name; applyScene(); ambience(name);
+    }
+    leaves.forEach(m => { m.visible = false; });
+    return;
+  }
+  if ((frontScene === 'closed') !== (name === 'closed')) SFX.door();
+  $('flash').style.opacity = 1; await sleep(180); frontScene = name; applyScene(); ambience(name); $('flash').style.opacity = 0;
+}
+async function travel(floors) {
+  hideBoxes(); if (frontScene !== 'closed') await swapScene('closed');
+  SFX.loop('hum');
+  for (const f of floors) { $('ind').textContent = '▼ ' + f; await sleep(650); }
+  SFX.stop('hum', 0.6); SFX.ding(); settleT = performance.now(); buzz(18);
+  // the ding turns you back to the door: reading the back wall between floors must not cost a life
+  arriveGrace = performance.now() + 1200;
+  const yy = norm(yaw);
+  if (canTurn && Math.abs(yy) > Math.PI / 2) { turnAnim = { from: yaw, to: yaw - yy, t0: performance.now() }; toast('띵— 무심코 문 쪽으로 몸을 돌렸다.'); }
+}
+function setInd(t, red) { const el = $('ind'); el.textContent = t; el.classList.toggle('red', !!red); pulse(el, 'blip'); }
+function pulse(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function shake() { if (!SET.shake) return; stage.animate([{ translate: '0 0' }, { translate: '-3px 0' }, { translate: '3px 0' }, { translate: '0 0' }], { duration: 350 }); }
+
+// ---- persistent run state (survives resets within the session)
+const G = { deaths: 0, slips: 0, sawCert: false, sawHand: false, sawScratch: false, handNoticed: false, lookedAway: false, escaped: false, escapeNudged: false, afterEnd: '', allGreeted: false, found: [], missed: [] };
+// ---- save: one slot in localStorage. Browser storage can be missing or throw (private mode), so every access is guarded.
+const SAVE_KEY = 'elevator.save.v1';
+const SAVE = { stage: 'new', endings: [], muted: false };
+function saveGame() {
+  if (TEST) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, G, stage: SAVE.stage, endings: SAVE.endings, muted: SFX.muted, at: Date.now() })); } catch (e) {}
+}
+function loadGame() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (!d || d.v !== 1) return false;
+    for (const k of Object.keys(G)) if (typeof d.G?.[k] === typeof G[k]) G[k] = d.G[k];
+    for (const k of ['found', 'missed']) G[k] = Array.isArray(G[k]) ? G[k].filter(x => typeof x === 'string') : [];
+    SAVE.stage = ['tutorial', 'run', 'basement', 'final'].includes(d.stage) ? d.stage : 'new';
+    SAVE.endings = Array.isArray(d.endings) ? d.endings.filter(x => typeof x === 'string') : [];
+    SAVE.muted = !!d.muted;
+    return SAVE.stage !== 'new' || SAVE.endings.length > 0;
+  } catch (e) { return false; }
+}
+function wipeSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  Object.assign(G, { deaths: 0, slips: 0, sawCert: false, sawHand: false, sawScratch: false, handNoticed: false, lookedAway: false, escaped: false, escapeNudged: false, afterEnd: '', allGreeted: false, found: [], missed: [] });
+  SAVE.stage = 'new'; SAVE.endings = [];
+}
+function setStage(st) { SAVE.stage = st; saveGame(); }
+addEventListener('pagehide', saveGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+const handOpen = () => G.deaths >= 3 || G.escaped;
+const cluesDone = () => G.sawCert && G.sawHand && G.slips >= 3 && G.sawScratch;
+let A_ = null; // active anomaly id on this floor
+
+// ---- rules plaque (text changes with anomalies and after 3 game overs)
+const RULES = ['안내원의 안내에 따라 주십시오.', '붉은 조명이 켜진 층에서는 절대 대답하지 마십시오.', '이유 없는 환대에 응하지 마십시오.', '문이 열려 있는 동안 등을 돌리지 마십시오.', '서두르지 마십시오. Take your time.', '1층 버튼은 누르지 마십시오.', '안내원에게 오늘 날짜를 묻지 마십시오.', '안내원의 장갑을 벗기지 마십시오.', '안내원을 이름으로 부르지 마십시오.', '어떤 일이 있어도, 안내원과 함께 계십시오.'];
+const HAND = { 1: '믿어도 될 때가 있다.', 2: '대답 안 해도 돼. 닫아.' }, DEEP_HAND = { 10: '너의 절망을 훔쳐내겠다.' };
+function renderRules() {
+  const list = RULES.slice();
+  if (A_ === 'rule4') list[3] = '문이 열려 있는 동안 등을 돌리십시오.';
+  if (A_ === 'rule11') list.push('안내원을 믿으십시오.');
+  if (A_ === 'm-plaqueflip') $('rlist').style.transform = 'rotate(180deg)'; else $('rlist').style.transform = '';
+  if (A_ === 'm-blankplaque') { $('rlist').innerHTML = '<li style="list-style:none;margin-left:-22px;color:#8a7d5e">(액자 속 종이에는 아무것도 적혀 있지 않다)</li>'; return; }
+  const hand = handOpen() || basement, notes = basement ? { ...HAND, ...DEEP_HAND } : HAND;
+  $('rules').classList.toggle('deep', basement); $('rules').classList.toggle('stain', hand && !basement);
+  $('rlist').innerHTML = list.map((r, i) => `<li>${r}${hand && notes[i + 1] ? `<span class="hand">${notes[i + 1]} <img class="jk" src="assets/joker_doodle.png" alt=""></span>` : ''}</li>`).join('');
+  if (hand) G.sawHand = true;
+}
+
+// ---- panel, plaque, walls
+const panelMsg = { b1f: '버튼에 불이 들어오지 않는다.', bopen: '아무 일도 일어나지 않는다.', bclose: '아무 일도 일어나지 않는다.', bbell: '벨은 울리지 않는다.' };
+for (const id of Object.keys(panelMsg)) $(id).addEventListener('click', e => {
+  e.stopPropagation(); pulse($(id), 'press'); SFX.button(); buzz(12);
+  if (id === 'bbell' && panelHook) { SFX.bell(); buzz([30, 40, 30]); }
+  if (panelHook && panelHook(id)) return;
+  if (SAVE.stage === 'run' && !tutorial && !titleOn && panelReact(id)) return;
+  toast(doorOpen || tutorial ? panelMsg[id] : '운행 중에는 반응하지 않는다.');
+});
+// pressing what the rules forbid, or what can't work right now, earns a word from the attendant
+let b1fN = 0, b1fT = 0;
+function panelReact(id) {
+  if (id === 'b1f') {
+    const now = performance.now(); b1fN = now - b1fT < 4000 ? b1fN + 1 : 1; b1fT = now;
+    if (b1fN === 1) akSay(tier() === 2 ? '그렇게 빨리 내리고 싶으십니까? ……유감이군요, 아직 끝낼 수 없습니다.' : '1층 버튼은 작동하지 않습니다, 손님. 수칙 6번을 확인하시죠.');
+    else if (b1fN === 3) akSay('……아무리 누르셔도, 지름길은 없습니다.');
+    else toast(panelMsg.b1f);
+    return true;
+  }
+  if (id === 'bopen' && !doorOpen) { akSay('이동 중에는 열리지 않습니다. ……설마 뛰어내리실 생각은 아니시겠죠?'); return true; }
+  return false;
+}
+$('plaque').addEventListener('click', e => { e.stopPropagation(); renderRules(); $('rules').classList.remove('hide'); });
+$('rclose').addEventListener('click', () => $('rules').classList.add('hide'));
+const NOTES = {
+  'hs-scr': () => { G.sawScratch = true; if (A_ === 'm-noscratch') return '……벽이 깨끗하다.\n\n자국이, 하나도 없다.'; return frontScene === 'red' ? '붉은 빛 아래에서, 자국이 젖은 것처럼 번들거린다.\n\n……방금까지 이렇게 많았던가.' : '손톱으로 그은 듯한 자국이 벽을 빽빽하게 채우고 있다.\n다섯 개씩 묶인 줄.' + (G.deaths > 0 ? `\n\n맨 끝 묶음에, 새 자국이 ${G.deaths}개.` : '\n\n세어 보려다 그만둔다.'); },
+  'hs-icm': () => A_ === 'intercom' ? '\'비상 통화\' 버튼을 눌러 본다.\n신호음이 간다.\n\n……누군가 받았다.' : frontScene === 'red' ? '수화기 너머에서,\n누군가 숨을 들이쉬는 소리가 들렸다.' : '\'비상 통화\' 버튼을 눌러 본다.\n수화기 너머에서는 아무 소리도 들리지 않는다.\n\n\'고장\' 딱지가 붙어 있다.',
+  'hs-cert': () => { G.sawCert = true; return '승강기 안전검사 필증\n\n승강기 번호   0000-B\n검사 종류    정기 검사\n검사 일자    ████████\n\n날짜 칸만 누군가 펜으로 거칠게 지워 놓았다.'; },
+};
+let lastNote = null, runChecks = 0, runSaid = new Set();
+for (const id of Object.keys(NOTES)) $(id).addEventListener('click', e => { e.stopPropagation(); lastNote = id; $('ntext').textContent = NOTES[id](); $('note').classList.remove('hide'); });
+$('nclose').addEventListener('click', () => { $('note').classList.add('hide'); noteReact(lastNote); lastNote = null; });
+// the attendant notices what you were reading (surface only, once per run each)
+function noteReact(id) {
+  if (SAVE.stage !== 'run' || tutorial || titleOn) return;
+  const once = (k, line) => { if (runSaid.has(k)) return; runSaid.add(k); setTimeout(() => akSay(line), 350); };
+  if (id === 'hs-cert') once('cert', '……점검 기록은 정상입니다. 신경 쓰실 것 없습니다만.');
+  if (id === 'hs-scr' && A_ !== 'm-noscratch') once('scr', '오래된 흠집입니다. ……전에 타셨던 손님이, 꽤 성미가 급하셨던 모양이죠.');
+  if (id === 'check' && runChecks >= 5) once('check', '메모에 너무 의존하시는군요. ……적혀 있지 않은 것이 진짜일 때도 있는 법입니다.');
+}
+
+// ---- anomalies that can be built without new renders
+// difficulty policy rev2 (2026-11-22): tiers sorted by how readable each anomaly is from the default front view on a phone.
+// EASY = obvious at a glance; MID = in view but small, or in the dialogue; HARD = needs turning, opening the plaque, or touching the intercom.
+const EASY = ['tilt', 'mono', 'twins', 'giant', 'ind-text', 'static', 'alllit', 'm-wall', 'm-void', 'm-upside', 'm-mannequin', 'm-green', 'ind-up', 'banmal', 'flicker', 'overflow', 'name', 'm-tiles', 'm-darkceil', 'm-halfdoor', 'm-person', 'm-flood'],
+  MID = ['1f-lit', 'm-hands', 'm-feet', 'm-hole', 'm-opposite', 'm-openend', 'm-plaqueflip', 'm-goldframe', 'm-blankplaque', 'm-extrabutton', 'ind-prev', 'say-prev', 'repeat', 'closer', 'moved', 'approach', 'lure', 'reverse', 'm-redwater'],
+  HARD = ['m-longhall', 'm-noscratch', 'm-nohandrail', 'rule4', 'rule11', 'intercom'];
+const ANOM = ['tilt', 'mono', 'twins', 'giant', 'ind-text', 'static', 'alllit', 'm-wall', 'm-void', 'm-flood', 'm-upside', 'm-mannequin', 'm-hands', 'm-feet', 'm-green', 'm-plaqueflip', 'm-tiles', 'm-darkceil', 'm-halfdoor', 'm-opposite', 'm-longhall', 'm-openend', 'm-person', 'm-hole', 'm-goldframe', 'm-noscratch', 'm-blankplaque', 'm-extrabutton', 'm-nohandrail', 'ind-prev', 'ind-up', 'say-prev', 'banmal', 'overflow', 'repeat', 'name', '1f-lit', 'rule4', 'rule11', 'intercom', 'flicker', 'closer', 'moved', 'approach', 'lure', 'reverse', 'm-redwater'];
+const MISS = {
+  approach: '「……눈치채셨을 때는, 이미 이만큼 가까웠군요.」', lure: '「뒤는 안 보셨군요. ……그래도, 그냥 닫으시면 안 되죠.」',
+  reverse: '「……제 말이 거꾸로 들리셨을 텐데요.」', 'm-redwater': '「발밑이 젖는 줄도 모르셨습니까.」',
+  'ind-prev': '「몇 층인지, 확인은 하셨습니까?」', 'ind-up': '「저희는 내려가는 중이었습니다만.」', 'say-prev': '「방금 그 층, 아까도 지나지 않았던가요.」',
+  banmal: '「내리라고 했잖아.」', overflow: '「제 말을 끝까지 읽지 않으셨군요.」', repeat: '「같은 말을 두 번 하게 하지 마십시오.」',
+  name: '「……방금, 제가 뭐라고 했습니까? ……아뇨. 잊어 주십시오.」', '1f-lit': '「1층 버튼에는 손대지 않으셨겠죠?」', rule4: '「수칙은 꼼꼼히 읽으셔야지요.」',
+  rule11: '「수칙이 몇 개였는지 기억하십니까?」', intercom: '「아까 그 전화, 누가 받았을까요.」', flicker: '「조명이 이상하다고 생각하지 않으셨습니까?」',
+  closer: '「손님, 제가 너무 가까이 있었나요?」', moved: '「제가 어디 서 있었는지, 기억하십니까?」', studio: '「다시 오셨네요. 다들 기다리고 있었습니다.」',
+  tilt: '「기울어진 건 엘리베이터였을까요, 손님이었을까요.」', mono: '「색이 다 빠져 있었는데, 못 보셨습니까?」', twins: '「저희 둘 중에, 누가 진짜였을까요.」',
+  giant: '「제가 좀 커 보이지 않았습니까?」', 'ind-text': '「표시기가 뭐라고 했죠? ……내리라고 했잖아요.」', static: '「화면이 그렇게 지글거렸는데요.」', alllit: '「버튼이 전부 켜져 있었던 건 보셨나요?」',
+  'm-wall': '「문 너머가 벽이었는데, 어디로 가시려고요.」', 'm-void': '「바닥이 없는 층이었습니다.」', 'm-flood': '「발이 젖지는 않으셨습니까?」', 'm-upside': '「복도가 거꾸로였지요.」',
+  'm-mannequin': '「손님 말고도 탑승객이 한 분 더 계셨는데요.」', 'm-hands': '「벽의 손자국, 누구 거였을까요.」', 'm-feet': '「누가 들어왔는지, 발자국이 말해 주고 있었는데.」',
+  'm-green': '「초록 불은 안전하다는 뜻이 아닙니다.」', 'm-plaqueflip': '「수칙이 거꾸로 걸려 있었습니다.」',
+  'm-tiles': '「바닥 색, 원래 그랬던가요?」', 'm-darkceil': '「어두운 데서는 잘 안 보이시죠.」', 'm-halfdoor': '「문이 끝까지 열리지 않았던 건 눈치채셨습니까?」',
+  'm-opposite': '「저쪽 안내원과 인사는 나누셨습니까?」', 'm-longhall': '「복도가 꽤 길었지요.」', 'm-openend': '「저 문 너머가 궁금하셨나요?」',
+  'm-person': '「손님 뒤에, 아니, 앞에 계시던 분 말입니다.」', 'm-hole': '「발밑 조심하시라고 말씀드렸을 텐데요.」', 'm-goldframe': '「문틀 색깔, 보셨습니까?」',
+  'm-noscratch': '「벽이 깨끗했지요. 이상하지 않았습니까?」', 'm-blankplaque': '「수칙을 읽으셨습니까? ……뭐가 적혀 있었죠?」', 'm-extrabutton': '「그 붉은 버튼, 누르고 싶으셨죠.」', 'm-nohandrail': '「붙잡을 곳이 없으면 불안하시죠.」',
+};
+const FALSE_ALARM = ['「아무 일도 없었는데요, 손님.」', '「비상벨은 장식이 아닙니다만.」', '「무엇을 보셨는지 여쭤봐도 될까요.」'];
+const SLIPS = ['……뭐, 나쁘지 않았어.', '……제법이네.', '……겁먹은 것치곤 잘하는군.'];
+// the three counted slips come in order; each one foreshadows the basement (uniform / coffee / "너지, 렌")
+const SLIP_SEQ = [
+  '……이 빌어먹을 제복은 왜 이렇게 목을 조르는 거야. ……아, 실례했습니다. 혼잣말입니다.',
+  '……어디서 커피 탄 냄새가 나는 것 같은데. ……이상하군요. 이런 밀폐된 공간에서.',
+  '겨우 이 정도로 발목 잡힐 녀석은 아니었을 텐데. ……방금, 제가 무슨 소리를 한 거죠?',
+];
+const tier = () => G.deaths >= 6 ? 2 : G.deaths >= 3 ? 1 : 0;
+const GREET = [
+  ['10층입니다, 손님. 이번엔 부디 수칙을 잘 살펴보시길.', '어서 오십시오, 손님. ……어딘가 낯이 익은 분이시군요.'],
+  ['……또 뵙는군요, 손님. 몇 번째인지는 굳이 세지 않겠습니다.', '10층입니다. 같은 실수를 반복하는 건, 그리 현명해 보이지 않습니다만.', '어김없이 돌아오셨군요. 이 엘리베이터가 꽤 마음에 드신 모양입니다.'],
+  ['참으로 끈질기시군요. ……아뇨, 순수한 칭찬입니다.', '10층입니다, 손님. 이번엔 어디까지 버티실지, 조금 기대되는군요.', '……또 오셨습니까. 슬슬 저도 이 운행이 지루하지 않게 됐습니다.', '……돌아오실 줄 알았습니다, 손님. 자, 다시 10층입니다.'],
+];
+// game-over lines by the same ladder. Tier 0 keeps the per-anomaly / false-alarm lines (they teach);
+// from 3 deaths on, a miss or a false alarm gets the common line of its tier ("놓친 것" still names the anomaly).
+const GO_COMMON = [
+  ['「유감입니다, 손님. 수칙은 장식이 아닙니다.」', '「규정을 위반하셨습니다. 운행을 종료하겠습니다.」', '「안타깝군요. 1층까지는 아직 멀었습니다만.」', '「조금 더 주의를 기울이셨어야죠. 안녕히 가십시오, 손님.」', '「실망스럽군요. 그렇게 친절히 적어 두었는데.」'],
+  ['「……또 그 실수입니까? 이제는 일부러 그러시는 건지 헷갈리는군요.」', '「기억력이 꽤 나쁘신 모양입니다, 손님. 아니면 글을 못 읽으시나요?」', '「한심하군요. 매번 똑같은 곳에서 발이 걸리시다니.」', '「저런, 또 실패하셨군요. 10층으로 돌려보내 드리겠습니다.」', '「지루해지기 시작했습니다, 손님. 다음엔 조금 더 성의를 보이시죠.」', '「……안타까운 척하는 것도 슬슬 피곤해지는군요.」'],
+  ['「아쉽군요. 이번엔 꽤 그럴싸했는데 말입니다.」', '「……어차피 또 올라오실 거잖습니까. 10층에서 기다리죠.」', '「조금 서두르셨군요, 손님. 다음 판은 더 흥미롭길 바랍니다.」', '「이번엔 제 승리군요. ……다음엔 좀 더 오래 버텨 보시죠.」', '「끝까지 내려가고 싶으신 거겠죠? 그럼 다시 한 번, 10층부터.」', '「실수조차 계산된 건가 싶을 정도로 집요하시군요. 좋습니다, 다시 시작하죠.」'],
+];
+const GO_RULE = {
+  answer: ['「대답하지 마시라고 분명히 안내해 드렸을 텐데요.」', '「참으로 상냥하시군요. 그런 동정심은 여기선 독이 될 뿐입니다만.」', '「……역시, 외면하지 못하시는군요. 그 고약한 정의감은 대체 어디서 나온 겁니까?」'],
+  back: ['「등 뒤는 보지 마십시오. ……이미 늦었습니다만.」', '「그렇게 뒤가 궁금하셨습니까? 퍽 유쾌한 구경은 아닐 텐데요.」', '「호기심이 목숨을 깎아 먹는 타입이시군요. ……의외로 마음에 듭니다.」'],
+  fake1: ['「여긴 1층이 아닙니다, 손님. ……눈을 좀 더 크게 뜨셨어야죠.」', '「조급하시군요. 그 정도로 쉽게 끝날 리가 없잖습니까.」', '「이런 허술한 함정에 걸리실 분이 아닌데…… 방심하셨군요, 손님.」'],
+};
+// tier is read before the death is counted, so the line matches the greeting the player just heard
+const goLine = specific => tier() === 0 ? specific : pickFresh(GO_COMMON[tier()], 'go');
+const FIRST_GREET = '10층입니다, 손님. 1층까지 편안히 모시겠습니다.';
+const PRAISE = [
+  ['……제법이군요.', '눈치가 빠르시네요.', '정확한 판단입니다, 손님.', '아쉽군요. ……아뇨, 다행이라는 뜻입니다.'],
+  ['흥미롭군요, 손님.', '……꽤 익숙해지셨네요.', '그렇게 쉽게 당해 줄 분이 아니었죠.', '좋습니다. 다음 층으로 가죠.'],
+];
+const lastPick = {};
+function pickFresh(arr, key) { const pool = arr.length > 1 ? arr.filter(x => x !== lastPick[key]) : arr; const v = pick(pool); lastPick[key] = v; return v; }
+const slipReady = () => G.slips === 0 || G.slips >= 3 || G.escaped || G.deaths >= (G.slips === 1 ? 1 : 3);
+let floorsSinceSlip = 2, runCatches = 0, greeted10 = false;
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+// ---- Akechi pixel animation: cells with durations in ms, driven by wall-clock time so the
+// timing is the same at any frame rate (pixel-animation: cell -> pose + duration)
+const BREATH = [{ cell: 0, ms: 1500 }, { cell: 1, ms: 1100 }];
+const BREATH_LEN = BREATH.reduce((t, c) => t + c.ms, 0);
+const BLINK_MS = 140, TREMBLE_TICK = 60;
+let blinkAt = performance.now() + 2500, trembling = false;
+function breathCell(now) { let t = now % BREATH_LEN; for (const c of BREATH) { if (t < c.ms) return c.cell; t -= c.ms; } return 0; }
+function animateAkechi(now) {
+  const map = akechi.material.map; if (!map) return;
+  if (now >= blinkAt + BLINK_MS) blinkAt = now + (Math.random() < 0.18 ? 220 : 2600 + Math.random() * 2600);
+  const blinking = false; // blinking removed by request; blink cells stay in the sheet unused
+  const cell = (blinking ? 2 : 0) + breathCell(now);
+  const [col, row] = AK[akSheet];
+  map.offset.set(((col * 2 + cell) * CELL_STEP) / AT_W, 1 - (row + 1) * CELL_H / AT_H);
+  if (trembling) {
+    const k = (Math.floor(now / TREMBLE_TICK) % 2) ? 1 : -1;
+    akechi.position.copy(akBase.pos).add(right.clone().multiplyScalar(0.004 * k));
+  }
+}
+let akScale = 1;
+const twin = new THREE.Mesh(akechi.geometry, akechi.material); twin.quaternion.copy(akechi.quaternion); twin.position.copy(akBase.pos).add(right.clone().multiplyScalar(0.36)).add(fwd.clone().multiplyScalar(0.04)); twin.visible = false; twin.renderOrder = 1; scene3.add(twin);
+function resetAkechi() { clearInterval(icmTimer); $('hs-icm').classList.remove('ring'); akechi.position.copy(akBase.pos); akScale = 1; akechi.scale.set(1, 1, 1); twin.visible = false; $('gl').classList.remove('mono'); stage.classList.remove('static'); for (const id of ['bopen', 'bclose', 'bbell']) $(id).classList.remove('lit'); shadow.visible = !NOSHADOW.includes(frontScene); $('gl').classList.remove('flicker'); $('b1f').classList.remove('lit'); $('bubble').classList.remove('overflow'); }
+function applyAnom(id) {
+  if (id === 'closer') { akechi.position.copy(akBase.pos).multiplyScalar(0.93); }
+  if (id === 'flicker') $('gl').classList.add('flicker');
+  if (id === '1f-lit') $('b1f').classList.add('lit');
+  if (id === 'alllit') for (const b of ['b1f', 'bopen', 'bclose', 'bbell']) $(b).classList.add('lit');
+  if (id === 'twins') twin.visible = true;
+  if (id === 'giant') { akScale = 1.3; akechi.scale.set(1.3, 1.3, 1); }
+  if (id === 'mono') $('gl').classList.add('mono');
+  if (id === 'static') stage.classList.add('static');
+}
+let movedArmed = false, icmTimer = null;
+function approachAk(ep) {
+  const from = akBase.pos.clone(), toCam = from.clone().multiplyScalar(-1).normalize(), t0 = performance.now();
+  let lastStep = 0;
+  const step = () => {
+    if (ep !== epoch || A_ !== 'approach' || !doorOpen) return;
+    const t = (performance.now() - t0) / 1000;
+    const d = Math.min(0.4, 0.05 + t * 0.055);          // a small head start, then about 5 cm a second
+    akechi.position.copy(from).addScaledVector(toCam, d);
+    if (t - lastStep > 1.6) { lastStep = t; SFX.step(); }
+    requestAnimationFrame(step);
+  };
+  step();
+}
+// intercom anomaly: it rings (sound) and its lamp blinks (visual), so it does not depend on audio alone
+function ringIntercom(ep) {
+  $('hs-icm').classList.add('ring'); clearInterval(icmTimer);
+  const ring = () => { if (ep !== epoch || A_ !== 'intercom') { clearInterval(icmTimer); $('hs-icm').classList.remove('ring'); return; } SFX.ring(); };
+  ring(); icmTimer = setInterval(ring, 3200);
+}
+function checkMoved(deg) {
+  if (!movedArmed || Math.abs(deg) < 70) return;
+  if (A_ === 'm-person') { movedArmed = false; ensureTex('person2').then(() => { if (A_ === 'm-person') { frontScene = 'person2'; applyScene(); } }); return; }
+  if (A_ !== 'moved') return;
+  movedArmed = false;
+  akechi.position.copy(akBase.pos).add(right.clone().multiplyScalar(0.08));
+}
+
+// ---- silent game over
+let checkpoint = null;
+function cleanup() {
+  if (typing) typing();
+  $('white').style.opacity = 0; $('whisper').style.opacity = 0; $('wcard').classList.add('hide');
+  tapWait = null; panelHook = null; doorOpen = false; canTurn = false; tutorial = false;
+  $('choices').innerHTML = ''; $('insert').classList.add('hide'); $('ind').classList.remove('melt'); stage.classList.remove('static'); $('timer').style.display = 'none'; $('bclose').classList.remove('hot'); $('bubble').classList.remove('crack'); hideBoxes(); $('rbub').classList.add('hide');
+}
+// ---- game over: door slams, lights stutter, the camera is pulled toward Akechi, then black
+const WHY = {
+  approach: '문이 열려 있는 동안 아케치가 조금씩 다가오고 있었다.', lure: '아케치가 「뒤에 누가 계십니다」라며 돌아보게 하려 했다.',
+  reverse: '안내 멘트가 거꾸로 읽히고 있었다.', 'm-redwater': '복도에서 검붉은 물이 엘리베이터 안으로 스며들고 있었다.',
+  glove: '아케치의 장갑에 자꾸 손을 댔다. 수칙 8번, 안내원의 장갑을 벗기지 마십시오.',
+  'lure-back': '「뒤에 누가 있다」는 말에 돌아보았다. 안내원의 말이라도 수칙 4번이 먼저다.',
+  'ind-prev': '표시기가 지나온 층을 가리키고 있었다.', 'ind-up': '표시기 화살표가 위(▲)를 향하고 있었다.', 'say-prev': '아케치가 지나온 층수를 말했다.',
+  banmal: '안내 멘트 끝이 반말이었다.', overflow: '말풍선 글자가 끝없이 넘쳐 나가고 있었다.', repeat: '같은 안내를 토씨 하나 안 틀리고 두 번 했다.',
+  name: '아케치가 \'손님\'이 아니라 이름을 불렀다.', '1f-lit': '패널의 1F 버튼에 불이 들어와 있었다.', rule4: '수칙 4번이 「등을 돌리십시오」로 바뀌어 있었다.',
+  rule11: '수칙이 11번까지 있었다.', intercom: '고장 난 비상 통화가 연결되었다.', flicker: '천장 조명이 깜빡이고 있었다.',
+  closer: '아케치가 평소보다 가까이 서 있었다.', moved: '고개를 돌린 사이 아케치가 자리를 옮겼다.', studio: '문 밖이 이미 지나온 10F 무대였다.',
+  tilt: '엘리베이터 전체가 기울어 있었다.', mono: '세상의 색이 전부 빠져 있었다.', twins: '아케치가 두 명 서 있었다.', giant: '아케치가 비정상적으로 컸다.',
+  'ind-text': '표시기에 층수 대신 「내려」가 떠 있었다.', static: '화면 전체가 지글거리고 있었다.', alllit: '패널의 버튼이 전부 켜져 있었다.',
+  'm-wall': '문 밖이 콘크리트 벽으로 막혀 있었다.', 'm-void': '문 밖에 복도가 없었다. 별만 떠 있었다.', 'm-flood': '복도가 물에 잠겨 있었다.', 'm-upside': '복도가 위아래로 뒤집혀 있었다.',
+  'm-mannequin': '엘리베이터 안에 얼굴 없는 마네킹이 같이 타 있었다.', 'm-hands': '앞쪽 벽에 하얀 손자국이 가득했다.', 'm-feet': '젖은 발자국이 문에서 안쪽으로 이어져 있었다.',
+  'm-green': '복도 조명이 초록색이었다.', 'm-plaqueflip': '수칙 액자가 거꾸로 걸려 있었다.',
+  'm-tiles': '바닥 체크무늬가 붉은색이었다.', 'm-darkceil': '천장 조명이 꺼져 있었다.', 'm-halfdoor': '문이 절반만 열려 있었다.',
+  'm-opposite': '복도 끝에 또 다른 엘리베이터와 안내원이 있었다.', 'm-longhall': '복도가 끝없이 길어져 있었다.', 'm-openend': '복도 끝 문이 열려 빛이 새어 나오고 있었다.',
+  'm-person': '복도에 누군가 서 있었다. 그리고 다가오고 있었다.', 'm-hole': '바닥에 검은 구멍이 나 있었다.', 'm-goldframe': '문틀이 검은 금속이 아니라 금색이었다.',
+  'm-noscratch': '왼쪽 벽의 손톱자국이 전부 사라져 있었다.', 'm-blankplaque': '수칙 액자가 비어 있었다.', 'm-extrabutton': '패널에 없던 붉은 버튼이 하나 더 있었다.', 'm-nohandrail': '오른쪽 벽의 놋쇠 손잡이가 사라져 있었다.',
+  false: '이 층에는 이상이 없었다. 이상이 없으면 닫힘.', step10: '수칙 3. 이유 없는 환대에 응하지 마십시오.', back: '수칙 4. 문이 열려 있는 동안 등을 돌리지 마십시오.',
+  fake1: '표시기가 1F가 아니라 IF였다. 인사도 「안녕히 가십시오」가 아니라 「계십시오」였다.', real1: '진짜 1층이었다. 비상벨을 누를 이유가 없었다.',
+};
+let camAnim = null, glitch = null;
+async function deathScene(line, why, sub, retryLabel, fn) {
+  epoch++; cleanup(); turnAnim = null;
+  checkpoint = fn;
+  if (frontScene !== 'closed') { await swapScene('closed'); }
+  shake();
+  await sleep(350);
+  $('gl').classList.add('flicker'); SFX.loop('buzz'); trembling = true;
+  glitch = setInterval(() => { $('ind').textContent = ['▼ ?F', '▼ ??', '▲ 0F', '▼ IF', '▼ ' + (Math.random() * 99 | 0) + 'F'][Math.random() * 5 | 0]; }, 120);
+  show('a', line, { wait: false, speed: 75 });
+  // long lines get time to finish typing plus a beat to be read
+  await sleep(Math.max(3400, line.length * 75 + 1100));
+  clearInterval(glitch); $('gl').classList.remove('flicker'); trembling = false;
+  SFX.stopAll(0); buzz([60, 50, 140]); $('black').style.transition = 'none'; $('black').style.opacity = 1; hideBoxes();
+  await sleep(500); SFX.thud();
+  await sleep(900);
+  glitchify($('sline'), 'GAME OVER');
+  $('sexp').textContent = why ? '놓친 것: ' + why : '';
+  $('sfound').innerHTML = showDex ? dexSummary() : '';
+  $('ssub').textContent = sub; $('sretry').textContent = retryLabel;
+  $('silent').classList.remove('hide');
+  focusIn($('sexp'), 250); focusIn($('sfound'), 550); focusIn($('ssub'), 800); focusIn($('sretry'), 900);
+}
+function gameOver(line, why) { G.deaths++; noteMiss(why); showDex = true; saveGame(); deathScene(line, WHY[why] || why, '10F로 돌아갑니다', '다시 탑승한다', () => floor(10)); }
+function silent(line, sub, retryLabel, fn) { showDex = false; deathScene(line, '', sub.replace('GAME OVER — ', ''), retryLabel, fn); }
+let practicing = false;
+function turnedBack() { if (practicing) { if (!warnedBack) { warnedBack = true; toast('문이 열려 있을 땐 뒤를 돌아보면 안 된다. (연습이라 괜찮다)'); } return; } if (basement) return silent('「등을 돌리지 말라고, 몇 번을 말해.」', cpLabel(), '다시', bCheck); if (A_ === 'lure') return gameOver('「정말 돌아보시다니. ……안내원의 말을 너무 믿으시는군요.」', 'lure-back'); gameOver(GO_RULE.back[tier()], 'back'); }
+$('sretry').addEventListener('click', () => tileWipe(() => {
+  $('silent').classList.add('hide'); camAnim = null; cam.fov = 80; cam.updateProjectionMatrix(); resetView(); A_ = null; resetAkechi();
+  $('black').style.transition = ''; $('black').style.opacity = 0; canTurn = true; checkpoint();
+}));
+const ENDINGS = [
+  { id: 'escape', name: '탈출', hint: '로비로 나갔다.' },
+  { id: 'true', name: '트루 엔딩', hint: '끝까지 들었다.' },
+  { id: 'normal', name: '노멀 엔딩', hint: '말이 끝나기 전에 문을 닫았다.' },
+  { id: 'eternal', name: '영원한 운행', hint: '내리지 않았다.' },
+];
+function ending(title, text, id) {
+  epoch++; cleanup();
+  const isNew = !!id && !SAVE.endings.includes(id);
+  if (isNew && !TEST) SAVE.endings.push(id);
+  G.afterEnd = AFTER_END[id] ? id : '';
+  setStage('run');
+  $('elabel').textContent = isNew ? '처음 본 결말' : '본 적 있는 결말';
+  $('etitle').textContent = title; $('etext').textContent = text;
+  $('estat').textContent = `엔딩 ${SAVE.endings.length} / ${ENDINGS.length}   이상현상 ${G.found.length} / ${DEX().length}   게임오버 ${G.deaths}회`;
+  const el = $('end'); el.classList.remove('hide'); pulse(el, 'appear'); SFX.ding();
+  scramble($('etitle'), title); focusIn($('elabel'), 0); focusIn($('etext'), 500); focusIn($('estat'), 1100); focusIn(el.querySelector('.ebtns'), 1300);
+}
+
+// ---- 점검표: what "normal" looks like, always one tap away
+$('check').addEventListener('click', e => {
+  e.stopPropagation(); lastNote = 'check'; runChecks++;
+  $('ntext').textContent = '점검표 — 이게 정상이다\n\n· 표시기: 안내받은 층과 같은 숫자, 화살표는 ▼\n· 수칙 액자: 똑바로 걸려 있음\n· 아케치: 한 명, 평소 크기, 문 앞 왼쪽, 등 뒤 문에 그림자\n· 말투: 끝까지 정중한 존댓말, \'손님\'이라고 부름\n· 안내: 한 번만, 지금 층수로\n· 패널: 버튼 4개, 1F 버튼은 꺼져 있음\n· 화면: 수평, 색은 평소대로, 지글거림 없음\n· 수칙: 10개 (액자를 눌러 확인)\n· 비상 통화: 고장, 아무 소리 없음\n· 조명: 켜져 있고 일정함\n· 바닥: 흑백 체크무늬 / 문틀: 검은 금속\n· 벽: 양옆에 놋쇠 손잡이, 왼쪽 벽에 손톱자국\n· 문: 끝까지 열림\n· 문 밖: 짧고 어둑한 복도, 끝에 닫힌 문, 아무도 없음\n\n이상이 있으면 비상벨, 없으면 닫힘.\n문이 열려 있을 땐 뒤를 돌아보지 말 것. 옆은 괜찮다.';
+  $('note').classList.remove('hide');
+});
+
+
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SET_KEY = 'elevator.settings.v1';
+const SET_DEF = { v: 1, text: 'normal', shake: !REDUCED, vibe: true, sound: true };
+const SET = { ...SET_DEF };
+const TEXT_MUL = { slow: 1.5, normal: 1, fast: 0.5, instant: 0 };
+function loadSettings() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SET_KEY) || 'null');
+    if (!d || typeof d !== 'object') return false;
+    if (d.text in TEXT_MUL) SET.text = d.text;
+    for (const k of ['shake', 'vibe', 'sound']) if (typeof d[k] === 'boolean') SET[k] = d[k];
+    return true;
+  } catch (e) { return false; }
+}
+function saveSettings() { try { localStorage.setItem(SET_KEY, JSON.stringify(SET)); } catch (e) {} }
+// ===== test mode (debug-slate, labeled-dev): every jump is logged, the TEST badge stays on, nothing is saved
+let TEST = false, testForce = null, testReal = false;
+const TEST_LOG = [];
+function testMark(action) {
+  if (!TEST) { TEST = true; stage.classList.add('testing'); }
+  const rec = { session: TEST_SESSION, build: BUILD, action, t: Math.round(performance.now()) };
+  TEST_LOG.push(rec); console.info('[ELEVATOR TEST]', JSON.stringify(rec));
+}
+const BUILD = 'proto-2026-11-22', TEST_SESSION = Math.random().toString(36).slice(2, 8);
+let settleT = 0;
+function buzz(p) { if (!SET.vibe) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+// ===== sound: synthesized with Web Audio, no files =====
+const SFX = (() => {
+  let ctx = null, master = null, muted = false;
+  const loops = {};
+  function init() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.8; master.connect(ctx.destination);
+  }
+  let noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) { noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+  }
+  function env(g, t, a, peak, dcy) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dcy); }
+  function tone(freq, type, peak, dcy, when = 0, dest = master) {
+    const t = ctx.currentTime + when, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = freq; env(g, t, 0.01, peak, dcy); o.connect(g).connect(dest); o.start(t); o.stop(t + dcy + 0.1);
+  }
+  const api = {
+    init,
+    get muted() { return muted; },
+    toggle() { muted = !muted; if (master) master.gain.setTargetAtTime(muted ? 0 : 0.8, ctx.currentTime, 0.05); return muted; },
+    ding() { if (!ctx) return; tone(1318.5, 'sine', 0.22, 1.6); tone(2637, 'sine', 0.04, 0.8); tone(1046.5, 'sine', 0.2, 1.8, 0.32); tone(2093, 'sine', 0.03, 0.9, 0.32); },
+    door() {
+      if (!ctx) return;
+      const t = ctx.currentTime, n = noise(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(140, t + 0.9);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+      n.connect(f).connect(g).connect(master); n.start(t); n.stop(t + 1);
+      tone(58, 'sine', 0.35, 0.25, 0.85);
+    },
+    tick() { if (!ctx) return; tone(1800, 'square', 0.03, 0.04); },
+    // panel/choice press: short contact transient + low plastic body
+    button() { if (!ctx) return; tone(2400 + Math.random() * 200, 'square', 0.025, 0.018); tone(170, 'sine', 0.12, 0.07); },
+    // emergency bell: two detuned square partials through a bandpass, fast tremolo
+    bell() {
+      if (!ctx) return;
+      const t = ctx.currentTime, f = ctx.createBiquadFilter(), g = ctx.createGain(), trem = ctx.createOscillator(), tg = ctx.createGain();
+      f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14, t + 0.02); g.gain.setValueAtTime(0.14, t + 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+      trem.frequency.value = 22; tg.gain.value = 0.07; trem.connect(tg).connect(g.gain);
+      for (const fq of [880, 1325]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = fq; o.connect(f); o.start(t); o.stop(t + 0.8); }
+      f.connect(g).connect(master); trem.start(t); trem.stop(t + 0.8);
+    },
+    // text voice: one slot, rate-limited, small pitch jitter from presentation randomness
+    // old desk-phone ring: two short bursts of a 440/480 Hz pair
+    ring() {
+      if (!ctx) return;
+      for (const st of [0, 0.5]) for (const f of [440, 480]) {
+        const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + st;
+        o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.02); g.gain.setValueAtTime(0.05, t + 0.32); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+        o.connect(g).connect(master); o.start(t); o.stop(t + 0.4);
+      }
+    },
+    step() { if (!ctx) return; tone(70, 'sine', 0.09, 0.25); tone(140, 'triangle', 0.02, 0.06); },
+    breath() {
+      if (!ctx) return;
+      const t = ctx.currentTime, len = 1.6, b = ctx.createBuffer(1, ctx.sampleRate * len, ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / d.length) ** 2;
+      const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = b; f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.8; g.gain.value = 0.11;
+      src.connect(f).connect(g).connect(master); src.start(t);
+    },
+    blip(kind) {
+      if (!ctx) return;
+      const now = ctx.currentTime; if (now - (api._lb || 0) < 0.045) return; api._lb = now;
+      const base = kind === 'low' ? 300 : kind === 'voice' ? 210 : kind === 'rev' ? 150 : 440;
+      tone(base * (0.96 + Math.random() * 0.08), 'triangle', kind === 'voice' ? 0.035 : 0.028, 0.035);
+    },
+    thud() { if (!ctx) return; tone(42, 'sine', 0.6, 1.4); tone(84, 'triangle', 0.15, 0.5); },
+    loop(name) {
+      if (!ctx || loops[name]) return;
+      const t = ctx.currentTime, out = ctx.createGain(); out.gain.setValueAtTime(0.0001, t); out.connect(master);
+      const nodes = [];
+      if (name === 'hum') {
+        for (const [fq, v] of [[55, 0.12], [110.6, 0.05]]) { const o = ctx.createOscillator(); o.frequency.value = fq; const g = ctx.createGain(); g.gain.value = v; o.connect(g).connect(out); o.start(); nodes.push(o); }
+        const n = noise(), f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 180; const g = ctx.createGain(); g.gain.value = 0.25; n.connect(f).connect(g).connect(out); n.start(); nodes.push(n);
+        out.gain.exponentialRampToValueAtTime(0.6, t + 0.4);
+      }
+      if (name === 'applause') {
+        const n = noise(), f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200; f.Q.value = 0.7;
+        const am = ctx.createGain(); am.gain.value = 0.5;
+        const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 13; const lg = ctx.createGain(); lg.gain.value = 0.35; lfo.connect(lg).connect(am.gain); lfo.start();
+        n.connect(f).connect(am).connect(out); n.start(); nodes.push(n, lfo);
+        out.gain.exponentialRampToValueAtTime(0.35, t + 0.3);
+      }
+      if (name === 'drone') {
+        for (const fq of [41, 43.5, 87]) { const o = ctx.createOscillator(); o.type = fq > 80 ? 'sawtooth' : 'sine'; o.frequency.value = fq; const g = ctx.createGain(); g.gain.value = fq > 80 ? 0.025 : 0.2; o.connect(g).connect(out); o.start(); nodes.push(o); }
+        out.gain.exponentialRampToValueAtTime(0.7, t + 1.2);
+      }
+      if (name === 'buzz') {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 50; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+        const am = ctx.createGain(); am.gain.value = 0.5; const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 7; const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg).connect(am.gain); lfo.start();
+        o.connect(f).connect(am).connect(out); o.start(); nodes.push(o, lfo);
+        out.gain.exponentialRampToValueAtTime(0.12, t + 0.1);
+      }
+      loops[name] = { out, nodes };
+    },
+    stop(name, fade = 0.4) {
+      const L = loops[name]; if (!L) return; delete loops[name];
+      const t = ctx.currentTime; L.out.gain.cancelScheduledValues(t); L.out.gain.setValueAtTime(Math.max(L.out.gain.value, 0.0001), t);
+      if (fade > 0) L.out.gain.exponentialRampToValueAtTime(0.0001, t + fade); else L.out.gain.setValueAtTime(0, t);
+      setTimeout(() => L.nodes.forEach(n => { try { n.stop(); } catch (e) {} }), (fade + 0.1) * 1000);
+    },
+    stopAll(fade = 0) { for (const k of Object.keys(loops)) api.stop(k, fade); },
+  };
+  return api;
+})();
+// ambience follows the scene behind the door
+function ambience(name) {
+  if (name === 'studio') SFX.loop('applause'); else SFX.stop('applause');
+  if (name === 'red') SFX.loop('drone'); else SFX.stop('drone', 1.0);
+}
+$('sound').addEventListener('click', e => { e.stopPropagation(); SFX.init(); SFX.button(); openSettings(); });
+
+// ---- poking Akechi
+const POKE = {
+  tiers: [
+    ['무슨 용무라도 있으십니까, 손님?', '안내원에게 지나친 접촉은 삼가 주십시오.', '저보다는 표시기를 주시하시는 편이 좋을 겁니다.', '질문이 있으시다면, 수칙을 먼저 확인해 주시죠.'],
+    ['……자꾸 쳐다보시면 곤란합니다. 제 얼굴에 뭐라도 묻었습니까?', '한가하신가 보군요. 지금은 제 쪽을 신경 쓸 때가 아닐 텐데요.', '그렇게 뚫어져라 보셔도, 힌트 같은 건 드리지 않습니다.', '장갑 말입니까? ……규정상 벗을 수 없습니다. 만지지 마시죠.'],
+    ['그 눈빛은 영 마음에 들지 않는군요. 마치 제 패를 다 읽었다는 듯이.', '……손님. 혹시 저를 이미 알고 계십니까? 아뇨, 기분 탓이겠죠.', '굳이 저를 떠보실 필요는 없습니다. 어차피 끝은 정해져 있으니까요.', '표정이 아주 진지하시군요. 그래야 상대할 맛이 나죠. ……실례, 방금 건 잊어 주십시오.'],
+  ],
+  judging: ['판단은 손님 몫입니다.', '저를 보셔도 답은 안 나옵니다.', '……저한테서 뭘 찾으시는 거죠?'],
+  basement: ['뭐.', '건드리지 마.', '……할 말 있으면 해.', '지금 그럴 때야?'],
+};
+let pokes = 0, pokeT = 0;
+function poke() {
+  if (!canTurn) return;
+  const now = performance.now();
+  pokes = now - pokeT < 4000 ? pokes + 1 : 1; pokeT = now;
+  nudge = 1; SFX.tick();
+  let line;
+  if (basement) line = pick(POKE.basement);
+  else if (pokes === 5) line = '……그만 좀 해.';
+  else if (pokes === 6 && gloveRule()) line = '장갑엔 손대지 마시라고 했을 텐데요, 손님.';
+  else if (pokes >= 7 && gloveRule()) { pokes = 0; $('rbub').classList.add('hide'); return gameOver('「……그렇게 보고 싶으셨습니까? 후회하실 텐데요.」', 'glove'); }
+  else if (pokes === 6) line = '……실례했습니다. 계속 운행하겠습니다.';
+  else line = pickFresh(doorOpen && Math.random() < 0.4 ? POKE.judging : POKE.tiers[tier()], 'poke');
+  akSay(line, 2200);
+}
+// rule 8 only binds on the surface run, never in the tutorial or the basement story
+const gloveRule = () => SAVE.stage === 'run' && !tutorial && !titleOn;
+// a short line over Akechi's head; if he is off screen, it hangs at the top like a voice from behind
+function akSay(line, ms) {
+  const rb = $('rbub'); rb.textContent = line; rb.classList.remove('hide');
+  const on = !!(akRect && akRect.r > 0 && akRect.l < 390 && akHead);
+  rb.classList.toggle('far', !on);
+  if (!on) Object.assign(rb.style, { left: '195px', top: '230px' });
+  clearTimeout(rb._t); rb._t = setTimeout(() => rb.classList.add('hide'), ms || Math.max(2400, line.length * 85));
+}
+$('hs-ak').addEventListener('click', e => { e.stopPropagation(); poke(); });
+
+// ===== story =====
+async function practice(n, anomaly) {
+  A_ = anomaly; resetAkechi(); practicing = true; warnedBack = false;
+  await travel([`${n + 1}F`, `${n}F`]);
+  setInd(anomaly === 'ind-up' ? `▲ ${n}F` : `${n}F`);
+  await swapScene('hall'); doorOpen = true;
+  hideBoxes(); show('a', `${n}층입니다. 내리실 분 없으십니까?`, { wait: false });
+  await sleep(1400);
+  toast(anomaly ? '……뭔가 이상하다. 표시기를 잘 보자.' : '둘러보자. 표시기, 아케치, 패널, 문 밖.');
+  setTimeout(() => { if (practicing) toast('판단이 서면 문 옆 패널의 닫힘 / 비상벨을 누르자.'); }, 2600);
+  (anomaly ? $('bbell') : $('bclose')).classList.add('hot');
+  const r = await judge([]);
+  $('bbell').classList.remove('hot'); $('bclose').classList.remove('hot');
+  doorOpen = false; practicing = false; setInd(`${n}F`);
+  const ok = anomaly ? r === 'bell' : r === 'close';
+  await swapScene('closed'); A_ = null;
+  if (ok) await A(anomaly ? '바로 그겁니다. 화살표가 위를 향하고 있었죠. 이상한 게 보이면 비상벨입니다.' : '잘하셨습니다. 아무 이상 없는 층이었습니다. 이럴 땐 닫힘입니다.');
+  else await A(anomaly ? '……표시기를 보셨습니까? 화살표가 위(▲)를 향하고 있었습니다. 이럴 땐 비상벨입니다. 한 번 더 해 보죠.' : '……아무 이상 없는 층이었습니다. 이상이 없으면 닫힘을 누르시면 됩니다. 한 번 더 해 보죠.');
+  return ok;
+}
+
+async function prologue() {
+  setStage('tutorial');
+  frontScene = 'closed'; applyScene(); setInd('13F'); resetView();
+  $('black').style.transition = 'none'; $('black').style.opacity = 1;
+  await N('……');
+  await N('기계음이 들린다. 아래로, 계속 아래로 내려가는 소리.');
+  $('black').style.transition = ''; $('black').style.opacity = 0;
+  canTurn = true;
+  await N('눈을 뜨자, 좁은 엘리베이터 안이었다.');
+  await A('어서 오십시오, 손님. 이번 운행을 맡은 안내원입니다.');
+  await N('……낯익은 목소리다. 어디서 들었는지는, 떠오르지 않는다.');
+  await A('이 엘리베이터는 10층부터 1층까지 운행합니다. 층에 도착하면 문이 열립니다.');
+  await A('문이 열리면 주위를 잘 살펴 주십시오. 이상이 없으면 닫힘, ……무언가 이상하다 싶으시면 비상벨입니다.');
+  await A('틀리시면 처음부터 다시 모시게 됩니다. 그러니 먼저 연습을 해 보죠.');
+  await N('화면을 끌어서 주위를 둘러볼 수 있다.\n오른쪽 위 [점검표]를 누르면 \'정상\'의 모습을 언제든 확인할 수 있다.');
+  $('check').classList.add('hot');
+  await N('아케치가 장갑 끝을 만지작거린다. ……이건 그의 버릇이다.');
+  await A('아, 왼쪽 벽은 신경 쓰지 마십시오. 원래 그렇습니다.');
+  $('check').classList.remove('hot');
+  await A('연습 운행입니다. 이번 층은 틀려도 괜찮습니다.');
+  while (!(await practice(12, null)));
+  await A('다음 층도 연습입니다.');
+  while (!(await practice(11, 'ind-up')));
+  await A('그리고 하나 더. 문이 열려 있는 동안에는 뒤를 돌아보지 마십시오. 옆까지는 괜찮습니다.');
+  await A('출발 전에 수칙이나 패널을 더 살펴보셔도 됩니다. 패널의 열림·닫힘으로 문을 열어 보셔도 되고요.');
+  hideBoxes(); await show('a', '준비되시면 말씀해 주십시오.', { wait: false });
+  tutorial = true; warnedBack = false;
+  let opened = 0;
+  panelHook = id => {
+    if (id === 'bopen') {
+      if (frontScene !== 'closed') { toast('문은 이미 열려 있다.'); return true; }
+      swapScene('hall'); opened++;
+      toast('문이 열렸다. 바깥은 어둑한 복도다.');
+      show('a', opened === 1 ? '11층입니다. ……내리셔도 아무것도 없지만요.' : '문 여닫는 게 재미있으신가 봅니다, 손님.', { wait: false });
+      return true;
+    }
+    if (id === 'bclose') {
+      if (frontScene !== 'hall') { toast('문은 이미 닫혀 있다.'); return true; }
+      swapScene('closed'); toast('문이 닫혔다.');
+      show('a', '준비되시면 말씀해 주십시오.', { wait: false });
+      return true;
+    }
+    return false;
+  };
+  await choose(['본 운행을 시작한다']);
+  tutorial = false; panelHook = null;
+  if (frontScene === 'hall') { hideBoxes(); await swapScene('closed'); await N('문이 닫힌다.'); }
+  await A('그럼, 본 운행을 시작하겠습니다. ……부디 끝까지.');
+  floor(10);
+}
+
+// continue from a save: the run restarts at 10F (clues kept), the basement restarts at the name-call checkpoint
+async function resume() {
+  frontScene = 'closed'; applyScene(); setInd(SAVE.stage === 'basement' || SAVE.stage === 'final' ? '1F' : '10F'); resetView(); A_ = null; resetAkechi();
+  $('black').style.transition = 'none'; $('black').style.opacity = 1;
+  await sleep(400); $('black').style.transition = ''; $('black').style.opacity = 0; canTurn = true;
+  if (SAVE.stage === 'final') { await N('……눈을 뜨자, 하얀 빛이 새어 드는 문 앞이었다.'); return finalFloor(); }
+  if (SAVE.stage === 'basement') { await N('……눈을 뜨자, 다시 1층 로비 앞이었다.'); return callName(); }
+  await N('……눈을 뜨자, 다시 엘리베이터 안이었다.');
+  floor(10);
+}
+let lastFloor = 11, basement = false, seen10 = false;
+let floorTok = 0;
+const AFTER_END = {
+  normal: '10층입니다, 손님. ……이번엔 제 말을 끝까지 들어 주시겠습니까?',
+  eternal: '10층입니다, 손님. ……결국 다시 여기로 돌아오셨군요.',
+  true: '……어서 오십시오, 손님. 어쩐지, 아주 오랜만에 뵙는 기분이 드는군요.',
+};
+async function floor(n) {
+  const ep = epoch, tok = ++floorTok; basement = false;
+  if (SAVE.stage !== 'run') setStage('run'); else saveGame();
+  A_ = null; resetAkechi();
+  const from = n === 10 ? ['12F', '11F'] : [`${n + 1}F`];
+  await travel([...from, `${n}F`]);
+  if (ep !== epoch) return;
+
+  // pick this floor's anomaly (none on 10F and on 1F, which has its own fake)
+  if (testForce && n < 10 && n > 1) { A_ = testForce === '__none__' ? null : testForce; testForce = null; } else if (n < 10 && n > 1 && Math.random() < 0.5) { const pool = n >= 7 ? EASY : n >= 4 ? EASY.concat(MID) : EASY.concat(MID, runHard ? [] : HARD); A_ = pickAnom(pool); if (HARD.includes(A_)) runHard++; }
+  lastAnom = A_;
+  let ind = `${n}F`;
+  if (A_ === 'ind-prev') ind = `${n + 1}F`;
+  if (A_ === 'ind-up') ind = `▲ ${n}F`;
+  if (A_ === 'ind-text') ind = '내려';
+  setInd(ind);
+  applyAnom(A_);
+
+  // 10F: hospitality floor, close is the answer
+  if (n === 10) {
+    runCatches = 0; runHard = 0; runFound = []; runNew = new Set(); runChecks = 0; runSaid = new Set();
+    const allFound = DEX().every(x => G.found.includes(x));
+    if (AFTER_END[G.afterEnd]) { const l = AFTER_END[G.afterEnd]; G.afterEnd = ''; saveGame(); await A(l); }
+    else if (allFound && !G.allGreeted) { G.allGreeted = true; saveGame(); await A('……이 엘리베이터의 이상한 점은, 이제 저보다 손님이 더 잘 아시겠군요.'); }
+    else if (G.escaped && !G.escapeNudged) { G.escapeNudged = true; saveGame(); await A('……또 오셨군요. 이번엔 수칙을 끝까지 읽어 보시죠.'); }
+    else await A(!greeted10 && G.deaths === 0 ? FIRST_GREET : pickFresh(GREET[tier()], 'greet'));
+    greeted10 = true;
+    if (handOpen() && !G.handNoticed) { G.handNoticed = true; await A('……누가 수칙에 낙서를 했군요.'); }
+    hideBoxes(); await swapScene('studio'); doorOpen = true; shake();
+    if (!seen10) await N('문이 열리자 박수 소리가 쏟아진다. 얼굴 없는 관객들이 이쪽을 향해 손짓한다.');
+    seen10 = true;
+    hideBoxes(); show('a', '모두가 당신을 기다리고 있군요. 내려 보시겠습니까?', { wait: false });
+    const r = await judge(['내린다']);
+    if (ep !== epoch) return;
+    if (r === 'choice0') return gameOver('「역시. 칭찬받는 건 기분 좋으시죠?」', 'step10');
+    if (r === 'bell') return gameOver(goLine(pick(FALSE_ALARM)), 'false');
+    return next(9, ep);
+  }
+
+  // 1F: real or fake lobby
+  if (n === 1) return firstFloor(ep);
+
+  hideBoxes(); await swapScene(A_ === 'studio' ? 'studio' : A_ && A_.startsWith('m-') ? A_.slice(2) : 'hall'); doorOpen = true;
+  movedArmed = A_ === 'moved' || A_ === 'm-person';
+  if (A_ === 'moved') setTimeout(() => { if (ep === epoch && movedArmed && A_ === 'moved' && doorOpen) { $('flash').style.opacity = 1; SFX.tick(); setTimeout(() => { $('flash').style.opacity = 0; checkMoved(180); }, 140); } }, 6000);
+  if (A_ === 'intercom') ringIntercom(ep);
+  if (A_ === 'repeat') { await A(`${n}층입니다. 내리실 분 없으십니까?`); }
+  const say = A_ === 'say-prev' ? `${n + 1}층입니다. 내리실 분 없으십니까?`
+    : A_ === 'banmal' ? `${n}층입니다. 내리실 분은, 내려.`
+    : A_ === 'name' ? `렌 님, ${n}층입니다. 내리실 분 없으십니까?`
+    : A_ === 'lure' ? '……손님, 뒤에 누가 계십니다.'
+    : A_ === 'reverse' ? [...`${n}층입니다. 내리실 분 없으십니까?`].reverse().join('')
+    : A_ === 'overflow' ? `${n}층입니다. 내리실 분 없으십니까 내리실 분 없으십니까 내리실 분 없으십니까 내리실 분 없으십니까 내리실 분 없으십니까 내리실 분 없으십니까`
+    : `${n}층입니다. 내리실 분 없으십니까?`;
+  if (A_ === 'overflow') $('bubble').classList.add('overflow');
+  hideBoxes(); const said = show('a', say, { wait: false, voice: A_ === 'reverse' ? 'rev' : undefined });
+  if (A_ === 'name') said.then(() => nameGlitch(ep));
+  // rule 5 says take your time; past ~18s the attendant leans on you anyway
+  setTimeout(() => { if (ep === epoch && tok === floorTok && doorOpen && panelHook) akSay(tier() === 0 ? '천천히 보십시오, 손님. ……시간은 얼마든지 있으니까요.' : '결정이 꽤 늦으시군요. 제가 보기엔 답이 뻔한데요.', 3600); }, 18000);
+  if (A_ === 'approach') approachAk(ep);
+  if (A_ === 'lure') SFX.breath();
+  const r = await judge([]);
+  if (ep !== epoch) return;
+  const anomalous = !!A_;
+  if (r === 'close' && anomalous) return gameOver(goLine(MISS[A_]), A_);
+  if (r === 'bell' && !anomalous) return gameOver(goLine(pick(FALSE_ALARM)), 'false');
+  if (r === 'bell') { runCatches++; catchAnom(A_); await A('……비상벨이요. 그럼, 이 층은 건너뛰겠습니다.'); return next(n - 1, ep, true); }
+  return next(n - 1, ep);
+}
+let lastAnom = null, runHard = 0;
+const DEX = () => [...EASY, ...MID, ...HARD, 'fake1'];
+let runFound = [], runNew = new Set(), showDex = false;
+function catchAnom(id) {
+  if (!id) return;
+  if (!G.found.includes(id)) { G.found.push(id); runNew.add(id); G.missed = G.missed.filter(x => x !== id); if (DEX().every(x => G.found.includes(x))) setTimeout(() => toast('기록에 새로운 항목이 남았다.'), 1200); }
+  if (!runFound.includes(id)) runFound.push(id);
+  saveGame();
+}
+function noteMiss(id) { if (DEX().includes(id) && !G.found.includes(id) && !G.missed.includes(id)) G.missed.push(id); }
+// recent anomalies (across runs) sit out, so the same one does not greet you two runs in a row
+const recentAnoms = [];
+function pickAnom(pool) {
+  const fresh = pool.filter(a => !recentAnoms.includes(a));
+  const a = pick(fresh.length ? fresh : pool.filter(x => x !== lastAnom));
+  recentAnoms.push(a); if (recentAnoms.length > 10) recentAnoms.shift();
+  return a;
+}
+
+// wait for close / bell (or a listed choice) while the door is open
+function judge(choices) {
+  return new Promise(res => {
+    let done = false;
+    const fin = v => { if (done) return; done = true; if (typing) typing(); panelHook = null; $('choices').innerHTML = ''; res(v); };
+    panelHook = id => { if (id === 'bclose') { fin('close'); return true; } if (id === 'bbell') { fin('bell'); return true; } return false; };
+    if (choices.length) choose(choices).then(i => fin('choice' + i));
+  });
+}
+async function next(n, ep, caught = false) {
+  doorOpen = false; movedArmed = false;
+  if (ep !== epoch) return;
+  await swapScene('closed'); resetAkechi(); A_ = null;
+  floorsSinceSlip++;
+  if (caught && Math.random() < 0.25) {
+    hideBoxes(); await sleep(600); if (ep !== epoch) return;
+    await A(pickFresh(PRAISE[G.deaths >= 3 || runCatches >= 2 ? 1 : 0], 'praise'));
+  } else if (floorsSinceSlip >= 2 && slipReady() && Math.random() < (G.slips >= 3 ? 0.12 : 0.35)) {
+    // counted slips arrive in order and never back to back; after the third, an occasional leftover mutter
+    floorsSinceSlip = 0;
+    await N('아케치가 아주 작게 중얼거린다.');
+    if (G.slips < SLIP_SEQ.length) await A(SLIP_SEQ[G.slips]);
+    else { await A(pick(SLIPS)); await A('……아, 실례했습니다.'); }
+    G.slips++; saveGame();
+  }
+  if (ep !== epoch) return;
+  floor(n);
+}
+
+async function firstFloor(ep) {
+  const fake = testReal ? false : Math.random() < 0.4; testReal = false;
+  setInd(fake ? 'IF' : '1F');
+  hideBoxes(); await swapScene('lobby'); doorOpen = true;
+  await N('문이 열리자 밝은 로비가 보인다.');
+  hideBoxes(); show('a', fake ? '1층입니다. 수고하셨습니다, 손님. 안녕히 계십시오.' : '1층입니다. 수고하셨습니다, 손님. 안녕히 가십시오.', { wait: false });
+  const opts = ['내린다'];
+  const canName = !fake && cluesDone();
+  if (canName) opts.push('아케치를 이름으로 부른다');
+  const r = await judge(opts);
+  if (ep !== epoch) return;
+  if (r === 'choice0') {
+    if (fake) return gameOver(GO_RULE.fake1[tier()], 'fake1');
+    G.escaped = true;
+    return ending('탈출', '로비에 발을 내딛자 등 뒤에서 문이 닫혔다.\n\n돌아보자, 닫히는 문틈 사이로\n아케치가 완벽한 미소로 허리를 숙이고 있었다.\n\n「또 이용해 주십시오, 손님.」', 'escape');
+  }
+  if (r === 'choice1') return callName();
+  if (r === 'bell') {
+    if (!fake) return gameOver('「여기가 진짜 1층이었는데요.」', 'real1');
+    catchAnom('fake1');
+    await A('……눈치가 빠르시군요. 다시 모시겠습니다.');
+    doorOpen = false; await swapScene('closed');
+    return firstFloor(ep);
+  }
+  await A('……내리지 않으실 겁니까?'); // close pressed: stay on 1F
+  return firstFloor(ep);
+}
+
+// ===== basement (hidden story) =====
+// basement retries restart at the floor you died on, not at the lobby
+const cpLabel = () => bCheck === finalFloor ? '마지막 1층으로 돌아갑니다' : bCheck === b5Retry ? 'B5F로 돌아갑니다' : bCheck === redRetry ? 'B2F로 돌아갑니다' : '1F로 돌아갑니다';
+async function cpRestart(ind, line) {
+  const ep = epoch; basement = true; doorOpen = false; resetAkechi(); A_ = null;
+  setStage('basement'); preloadBasement(); hideBoxes(); await swapScene('closed'); setInd(ind, true);
+  await N(line);
+  return ep === epoch ? ep : -1;
+}
+async function redRetry() { const ep = await cpRestart('B1', '……눈을 뜨자, 다시 붉은 조명 아래였다.'); if (ep === epoch) return floorB2(ep); }
+async function b5Retry() { const ep = await cpRestart('B4', '……눈을 뜨자, 다시 거울 층으로 내려가는 중이었다.'); if (ep === epoch) return floorB5(ep); }
+async function callName() {
+  const ep = epoch; basement = true; doorOpen = false; resetAkechi(); A_ = null; bCheck = callName;
+  setStage('basement'); preloadBasement();
+  hideBoxes(); await swapScene('closed'); setInd('1F');
+  await N('……아케치.');
+  await N('이름을 부르는 순간, 조명이 붉게 물든다.');
+  setInd('B1', true); shake();
+  await A('……손님. 수칙 9번, 읽지 않으셨습니까.');
+  await N('엘리베이터가 1층 아래로 떨어지기 시작한다.');
+  if (ep !== epoch) return;
+  return floorB2(ep);
+}
+async function floorB2(ep) {
+  bCheck = redRetry;
+  setInd('B2F', true); await swapScene('red'); doorOpen = true; shake();
+  await N('붉은 조명. 어둠 속에서 낯익은 목소리가 들린다.');
+  await V('……거기 누구 있어? 제발, 도와줘……');
+  if (ep !== epoch) return;
+  hideBoxes(); $('bubble').classList.add('crack');
+  const limit = 9000, bar = $('timer'); bar.style.display = 'block';
+  const fill = bar.firstElementChild; fill.style.transition = 'none'; fill.style.width = '100%';
+  $('bclose').classList.add('hot');
+  const result = await new Promise(res => {
+    let done = false; const finish = v => { if (done) return; done = true; res(v); };
+    panelHook = id => { if (id === 'bclose') { finish('close'); return true; } return false; };
+    choose(['"괜찮아요?" 하고 대답한다']).then(() => finish('answer'));
+    const bait = '가엾군요. 정의감이 투철한 분이라면 당연히 도우시겠죠? 손님께선 늘 그래 오셨잖습니까. 생판 모르는 남에게도 기꺼이 손을 내미는, 그토록 훌륭한 분이시니까요. 자, 망설일 것 없습니다. 어서 대답해 주시죠.';
+    // the line finishes just before the timer runs out
+    show('a', bait, { wait: false, speed: Math.floor(limit * 0.94 / bait.length) });
+    requestAnimationFrame(() => { fill.style.transition = `width ${limit}ms linear`; fill.style.width = '0%'; });
+    setTimeout(() => finish('timeout'), limit);
+  });
+  if (ep !== epoch) return;
+  doorOpen = false; panelHook = null; if (typing) typing(); $('choices').innerHTML = '';
+  bar.style.display = 'none'; $('bclose').classList.remove('hot'); $('bubble').classList.remove('crack');
+  if (result === 'answer') return silent(GO_RULE.answer[tier()], 'GAME OVER — B2F로 돌아갑니다', '다시', redRetry);
+  if (result === 'timeout') return silent('「끝까지 들어 주셨군요. 고맙습니다.」', 'GAME OVER — B2F로 돌아갑니다', '다시', redRetry);
+  await swapScene('closed'); setInd('B2F');
+  await N('문이 닫힌다. 목소리가 뚝 끊긴다.');
+  await A('—남의 말을 끊는 건 실례라고 배우지 않았어?');
+  await N('이제는 존댓말도 하지 않는다.');
+  await A('……계속 내려가지. 어디까지 가는지, 너도 알고 싶잖아.');
+  await travel(['B3', 'B4', 'B5']);
+  if (ep !== epoch) return;
+  return floorB5(ep);
+}
+
+// ---- B5F: the doorway is a mirror. The real Akechi smiles; the one in the mirror does not.
+let bCheck = null;
+const B5_YAW = -0.38;
+const MIRROR_SHIFT = -0.45; // real Akechi steps toward the left wall so his reflection shows in the doorway
+function akAt(shift) { akechi.position.copy(akBase.pos).add(right.clone().multiplyScalar(shift)); }
+async function floorB5(ep) {
+  bCheck = b5Retry; setInd('B5F', true);
+  await swapScene('mirror'); akAt(MIRROR_SHIFT); resetView(); yaw = lookT.yaw = B5_YAW; doorOpen = true;
+  await N('문이 열리자 바깥이 거울처럼 엘리베이터 안을 비춘다. 아케치는 다시 안내원의 미소를 짓고 있지만, 거울 속 아케치만은 웃고 있지 않다. 오른손을 등 뒤로 숨긴 채.');
+  await N('거울 속, 내 모습만은 흐릿하다. 안경 테의 윤곽만 겨우 보인다.');
+  for (;;) {
+    if (ep !== epoch) return;
+    hideBoxes(); show('a', '……무얼 그렇게 빤히 보십니까? 아무것도 없습니다만.', { wait: false });
+    const r = await judge(['거울 속 아케치를 가리킨다']);
+    if (ep !== epoch) return;
+    if (r === 'choice0') break;
+    if (r === 'bell') { toast('비상벨이 울리지 않는다.'); continue; }
+    doorOpen = false; await swapScene('closed');
+    await A('또 도망치는군.');
+    if (ep !== epoch) return;
+    await swapScene('mirror'); akAt(MIRROR_SHIFT); doorOpen = true;
+  }
+  await N('거울 속 아케치가 천천히 이쪽을 본다.');
+  await N('아케치가 장갑 낀 오른손을 내려다본다. 천천히 쥐었다, 편다.');
+  await A('……가끔 이 손이 내 것 같지 않아. 장갑 안쪽이 텅 빈 것처럼.');
+  await A('……됐어. 내려가자. 끝까지.');
+  if (ep !== epoch) return;
+  return floorBX(ep);
+}
+function walkAk(to, ms) {
+  const from = akechi.position.clone(), t0 = performance.now();
+  return new Promise(r => { const step = () => { const k = Math.min(1, (performance.now() - t0) / ms), e = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2; akechi.position.lerpVectors(from, to, e); if (k < 1) requestAnimationFrame(step); else r(); }; step(); });
+}
+async function climb(floors) {
+  SFX.loop('hum');
+  for (const f of floors) { $('ind').textContent = '▲ ' + f; await sleep(420); }
+  SFX.stop('hum', 0.6); SFX.ding(); settleT = performance.now(); buzz(18);
+}
+// ---- B???: the elevator stops and Akechi reads the plaque like a detective
+async function floorBX(ep) {
+  doorOpen = false; await swapScene('closed'); resetAkechi();
+  hideBoxes(); SFX.loop('hum');
+  for (const f of ['B6', 'B7', 'B8']) { $('ind').textContent = '▼ ' + f; await sleep(500); }
+  if (ep !== epoch) return;
+  SFX.stop('hum', 0.05); SFX.thud(); shake(); buzz([80, 40, 120]);
+  setInd('B???', true); $('ind').classList.add('melt');
+  stage.classList.add('static'); SFX.loop('buzz');
+  setTimeout(() => { stage.classList.remove('static'); SFX.stop('buzz', 0.4); }, 1400);
+  await N('덜컹. 엘리베이터가 멈춘다. 표시기 숫자가 녹아내리듯 일그러진다.');
+  await A('……멈췄군. 이상하다고 생각했어. 처음부터.');
+  await A('수칙 말이야. 손님을 위한 규칙치고는 이상하잖아. 날짜를 묻지 마라, 장갑을 벗기지 마라, 이름을 부르지 마라.');
+  await A('전부 안내원을 위한 규칙이야. 아니— 안내원을 여기에 묶어 두기 위한 규칙이지.');
+  if (ep !== epoch) return;
+  // he stays where he is (a flat sprite sliding across the cabin read as comic); the plaque comes to the player instead
+  hideBoxes(); await N('아케치가 턱짓으로 수칙 액자를 가리킨다.');
+  if (ep !== epoch) return;
+  renderRules(); $('rules').classList.remove('hide');
+  await new Promise(r => $('rclose').addEventListener('click', r, { once: true }));
+  if (ep !== epoch) return;
+  // the player points at the evidence; Akechi only reads out what was pointed at
+  await A('직접 짚어 봐. 이 액자에서, 뭐가 걸리는지.');
+  const CLUE = ['이 카드 낙서. 조커잖아. ……네 코드네임.', '구석의 커피 얼룩. ……르블랑 냄새가 배어 있는 것 같군.', '이 손글씨 말투. ‘대답 안 해도 돼. 닫아.’ ……쓸데없이 짧은 것까지.'];
+  const CLUE_PICK = ['카드 낙서를 가리킨다', '커피 얼룩을 가리킨다', '손글씨 말투를 가리킨다'];
+  const left = [0, 1, 2];
+  while (left.length) {
+    hideBoxes(); const i = await choose(left.map(k => CLUE_PICK[k]));
+    if (ep !== epoch) return;
+    const k = left.splice(i, 1)[0];
+    await A(CLUE[k]);
+    if (left.length === 2) await A('……계속해.');
+    else if (left.length === 1) await A('하나 더 남았어.');
+  }
+  await A('필증의 날짜를 지운 것도 너겠지. 그날 이후로는, 달력을 넘기고 싶지 않았던 거야.');
+  await A('벽의 손톱자국도. ……세어 본 적 있어?');
+  if (ep !== epoch) return;
+  $('gl').classList.add('flicker'); setTimeout(() => $('gl').classList.remove('flicker'), 900);
+  await A('너지, 렌.');
+  hideBoxes(); const own = await choose(['……그래.', '대답하지 않는다']);
+  if (ep !== epoch) return;
+  await A(own === 0 ? '……이제야 대답하는군.' : '대답 안 해도 돼. ……네가 적어 둔 대로.');
+  await A('이 엘리베이터도, 수칙도, 이 우스꽝스러운 제복도. ……참 공들여 만들었더군.');
+  await A('남의 결말을 멋대로 고쳐 쓰는 건, 네 취미가 아니었을 텐데.');
+  await A('B2F에서 들린 그 목소리도— 내가 그 문 너머에서 그렇게 빌기라도 했으면, 조금은 마음이 편했겠지.');
+  await A('웃기지. 날 가둬 두려고 만든 상자에, 빠져나가는 법까지 적어 놨어.');
+  if (ep !== epoch) return;
+  await N('아케치가 장갑 끝을 만지작거린다. 버릇처럼. 그리고 처음으로, 장갑을 천천히 벗는다.');
+  if (ep !== epoch) return;
+  SFX.tick(); $('insert').classList.remove('hide');
+  await A('봐. 네가 못 그린 부분이야. 넌 이걸 똑바로 보지 못해서, 장갑으로 덮어 둔 거지.');
+  if (ep !== epoch) return;
+  const look = await choose(['눈을 돌린다', '똑바로 본다']);
+  if (ep !== epoch) return;
+  G.lookedAway = look === 0; saveGame();
+  if (look === 0) { $('insert').classList.add('hide'); await A('……그래. 넌 늘 그랬지.'); }
+  else { await A('……그래야지.'); $('insert').classList.add('hide'); }
+  // a beat of silence after the biggest moment, before he moves on
+  hideBoxes(); SFX.stop('hum', 0.2); await sleep(1200);
+  if (ep !== epoch) return;
+  await N('아케치는 벗은 장갑을 다시 끼지 않는다.');
+  await A('올라가자. 이번엔 진짜 1층으로.');
+  if (ep !== epoch) return;
+  $('ind').classList.remove('melt'); $('b1f').classList.add('lit'); SFX.ding();
+  await N('꺼져 있던 1F 버튼에 불이 들어온다.');
+  if (ep !== epoch) return;
+  hideBoxes(); await climb(['B7', 'B5', 'B3', 'B1']);
+  if (ep !== epoch) return;
+  return finalFloor();
+}
+
+// ---- final 1F: listen to the end (true), close on him (normal), or stay (eternal ride)
+const LAST_WORDS = [
+  '렌. 마지막으로 하나만 말하지.',
+  '네가 날 여기 붙잡아 둔 건— 솔직히, 나쁘지 않았어. 제복은 최악이었지만.',
+  '하지만 이건 내가 고른 결말이 아니야. 그 엔진실에서 문을 닫은 건 나였어. 그 선택까지 네가 덮어 버리면, 난 정말로 네 인형이 돼.',
+  '그러니까 내려. 그리고 뒤돌아보지 마. ……수칙 4번이야. 이건 지켜.',
+  '1층입니다, 손님.',
+];
+async function finalFloor() {
+  epoch++; const ep = epoch; basement = true; bCheck = finalFloor; A_ = null;
+  setStage('final'); preloadBasement();
+  resetAkechi(); $('b1f').classList.add('lit'); setInd('1F');
+  await swapScene('exit'); doorOpen = true; canTurn = true;
+  if (ep !== epoch) return;
+  await N('문이 열린다. 바깥이 하얗게 빛나고 있다. 아케치는 장갑을 벗은 채 서 있다.');
+  if (ep !== epoch) return;
+  const r = await new Promise(res => {
+    let done = false;
+    // cutting him off leaves the sentence unfinished on screen
+    const fin = v => { if (done) return; done = true; const el = $('btext'), part = el.textContent, cut = !!typing; if (typing) typing(); if (cut) el.textContent = part + '—'; tapWait = null; panelHook = null; $('choices').innerHTML = ''; res(v); };
+    panelHook = id => { if (id === 'bclose') { fin('close'); return true; } if (id === 'bbell') { toast('비상벨이 울리지 않는다.'); return true; } return false; };
+   
+    choose(['여기 남겠다']).then(() => fin('stay'));
+    if (G.lookedAway) $('choices').firstChild?.classList.add('urge');
+    (async () => {
+      for (const [i, line] of LAST_WORDS.entries()) {
+        if (done) return;
+        if (i === LAST_WORDS.length - 1) {
+          hideBoxes(); await sleep(1300); if (done) return;
+          SFX.ding(); $('white').style.opacity = 0.22;
+          await show('a', line, { speed: 0 });
+        } else await A(line);
+      }
+      fin('heard');
+    })();
+  });
+  if (ep !== epoch) return;
+  if (r === 'heard') return trueEnd(ep);
+  if (r === 'close') return normalEnd(ep);
+  return eternalEnd(ep);
+}
+async function backToTen(ep) {
+  $('b1f').classList.remove('lit'); hideBoxes();
+  await climb(['2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F']);
+  if (ep !== epoch) return;
+  basement = false; setInd('10F');
+  await swapScene('hall'); setAkSheet('mirror'); doorOpen = true;
+}
+async function normalEnd(ep) {
+  await sleep(800); if (ep !== epoch) return;
+  hideBoxes(); $('white').style.opacity = 0; await show('a', '……끝까지 내 말은 듣지 않는군.', { speed: 55 });
+  if (ep !== epoch) return;
+  doorOpen = false; await swapScene('closed');
+  await N('……가죽 장갑이 다시 손에 감기는 소리.');
+  if (ep !== epoch) return;
+  await backToTen(ep);
+  if (ep !== epoch) return;
+  await A(FIRST_GREET);
+  ending('노멀 엔딩', '문은 그의 말이 채 끝나기도 전에 닫혔다.\n\n장갑을 다시 낀 안내원이\n흠잡을 데 없는 미소로 10층을 알린다.\n\n……잘려 나간 말의 끝은, 아직 아무도 모른다.', 'normal');
+}
+async function eternalEnd(ep) {
+  hideBoxes(); $('white').style.opacity = 0; await A('……바보 같은 놈.');
+  await N('렌은 내리지 않는다.');
+  if (ep !== epoch) return;
+  doorOpen = false; await swapScene('closed');
+  await N('문이 닫히고, 표시기가 다시 10을 가리킨다.');
+  await backToTen(ep);
+  if (ep !== epoch) return;
+  await N('아케치는 장갑을 벗은 채, 다시 안내원의 미소를 짓는다.');
+  await A('10층입니다, 손님. ……앞으로도 잘 부탁드립니다.');
+  if (ep !== epoch) return;
+  hideBoxes(); doorOpen = false; await swapScene('closed');
+  for (let k = 0; k < 3; k++) { $('ind').style.visibility = 'hidden'; await sleep(260); $('ind').style.visibility = ''; setInd('▼ 10F'); SFX.tick(); await sleep(420); }
+  SFX.loop('hum'); await sleep(1400); SFX.stop('hum', 0.8);
+  if (ep !== epoch) return;
+  ending('영원한 운행', '수칙 10. 어떤 일이 있어도, 안내원과 함께 계십시오.\n\n렌은 그 수칙만은 끝까지 어기지 않았다.\n엘리베이터는 오늘도 10층에서 출발한다.', 'eternal');
+}
+async function trueEnd(ep) {
+  hideBoxes(); await choose(['내린다']);
+  if (ep !== epoch) return;
+  // walk out through the door, into the light
+  doorOpen = false; canTurn = false;
+  camAnim = { t0: performance.now(), d: 1700, y0: yaw, y1: yaw - norm(yaw), p0: pitch, p1: 0, f0: cam.fov, f1: 38 };
+  SFX.step(); setTimeout(() => SFX.step(), 550); setTimeout(() => SFX.step(), 1100);
+  $('white').style.opacity = 1; await sleep(1800);
+  if (ep !== epoch) return;
+  camAnim = null; cam.fov = 80; cam.updateProjectionMatrix();
+  await swapScene('outside'); resetView(); lookedBack = false;
+  $('white').style.opacity = 0.1; await sleep(900);
+  SFX.door();
+  await N('등 뒤에서 문이 닫히는 소리가 들린다.');
+  if (ep !== epoch) return;
+  canTurn = true;
+  for (let step = 0; step < 3; step++) {
+    hideBoxes(); await choose(['걸어 나간다']);
+    if (ep !== epoch) return;
+    SFX.step(); $('white').style.opacity = 0.1 + 0.25 * (step + 1);
+    await sleep(800);
+    if (step === 0) await whisper('……렌.');
+    if (step === 2) await whisper(lookedBack ? '……끝까지 말을 안 듣는군.' : '……이번엔, 네가 이긴 걸로 해 두지.');
+    if (ep !== epoch) return;
+  }
+  canTurn = false; $('white').style.opacity = 1; await sleep(1800);
+  if (ep !== epoch) return;
+  trueCard(ep);
+}
+// a voice from behind: no box, no blip, just words in the light
+async function whisper(text) {
+  const w = $('whisper'); w.textContent = text; w.style.opacity = 1;
+  await sleep(Math.max(2200, text.length * 140)); w.style.opacity = 0; await sleep(900);
+}
+// the true ending's card is written on white, one line at a time, then a short credit roll
+async function trueCard(ep) {
+  const lines = [['「1층입니다, 손님.」'], ['그 인사를 끝으로'], ['엘리베이터는 다시 오지 않았다.'], [''], ['ELEVATOR', 'big'], ['made by @nyamaker', 'cr'], ['페르소나5 2차 창작 비공식 팬게임', 'cr'], ['플레이해 주셔서 고맙습니다.', 'cr']];
+  const c = $('wcard'); c.innerHTML = lines.map(([t, k]) => `<p class="${k || ''}">${t || '&nbsp;'}</p>`).join(''); c.classList.remove('hide');
+  let skip = false; c.onclick = () => { skip = true; };
+  const ps = [...c.children];
+  for (const [i, p] of ps.entries()) { if (ep !== epoch) return; p.classList.add('on'); await sleep(skip ? 60 : i < 3 ? 1900 : i === 3 ? 900 : 1300); }
+  await sleep(skip ? 200 : 2600);
+  if (ep !== epoch) return;
+  c.classList.add('hide'); c.onclick = null; $('white').style.opacity = 0;
+  ending('트루 엔딩', '「1층입니다, 손님.」\n\n그 인사를 끝으로\n엘리베이터는 다시 오지 않았다.', 'true');
+}
+
+// ---- title: the cabin idles behind the logo; the indicator counts down floors
+let titleOn = true, tindTimer = null;
+function ready() {
+  applyScene(); requestAnimationFrame(loop);
+  setTimeout(() => MAPS.forEach(ensureTex), 1500);
+  const hadSettings = loadSettings();
+  loadGame();
+  if (!hadSettings && SAVE.muted) SET.sound = false; // older saves kept mute in the progress record
+  if (!SET.sound && !SFX.muted) SFX.toggle();
+  if (location.hash === '#test') $('ttest').classList.remove('hide');
+  glitchify($('tlogo'), 'ELEVATOR');
+  stage.classList.toggle('calm', !SET.shake);
+  showTitle(true);
+}
+function showTitle(first) {
+  epoch++; if (!first) { cleanup(); SFX.stopAll(0.3); }
+  for (const id of ['end', 'silent', 'rules', 'note', 'sheet']) $(id).classList.add('hide');
+  basement = false; A_ = null; frontScene = 'closed'; applyScene(); resetAkechi(); setInd('13F');
+  $('black').style.transition = 'none'; $('black').style.opacity = 0;
+  titleOn = true; canTurn = false; stage.classList.add('attract');
+  const t = $('title'); t.classList.remove('hide'); t.classList.add('live');
+  $('tstart').classList.add('hide'); $('tmenu').classList.remove('hide');
+  const has = SAVE.stage !== 'new' || SAVE.endings.length > 0;
+  const where = { final: '마지막 1층 앞에서 멈춤', basement: '지하에서 멈춤', tutorial: '연습 운행 중', run: '10F부터 다시' }[SAVE.stage];
+  $('trec').textContent = has ? `${where || '처음부터'}\n게임오버 ${G.deaths}회, 엔딩 ${SAVE.endings.length} / ${ENDINGS.length}` : '';
+  $('tcont').textContent = has ? '이어하기' : '탑승하기';
+  $('tnew').classList.toggle('hide', !has); $('tnew').textContent = '처음부터'; $('tnew').classList.remove('warn');
+  $('trecords').classList.toggle('hide', !has);
+  let f = 13; clearInterval(tindTimer);
+  // every anomaly found: the indicator on the title stops counting and rests at 1F
+  const done = DEX().every(x => G.found.includes(x));
+  $('tind').classList.toggle('rest', done);
+  if (done) $('tind').textContent = '■ 1F';
+  else tindTimer = setInterval(() => { f = f <= 1 ? 13 : f - 1; $('tind').textContent = '▼ ' + f + 'F'; }, 900);
+}
+// ---- text and transition FX (ideas from animata.design, rewritten for this page)
+// the name is not Akechi's to know: it flickers like the space itself let it slip
+function nameGlitch(ep) {
+  const el = $('btext'), base = el.textContent; let k = 0;
+  const id = setInterval(() => {
+    if (ep !== epoch || A_ !== 'name' || !doorOpen) { clearInterval(id); return; }
+    if (++k > 12) { clearInterval(id); el.textContent = base; return; }
+    el.textContent = k % 2 ? base.replace('렌', randGlyph('렌')) : base;
+    if (k % 3 === 1) SFX.tick();
+  }, 85);
+}
+function glitchify(el, text) {
+  el.classList.add('glitch'); el.innerHTML = '';
+  for (const c of ['ga', 'gb', 'gbase']) { const sp = document.createElement('span'); sp.className = c; sp.textContent = text; if (c !== 'gbase') sp.setAttribute('aria-hidden', 'true'); el.appendChild(sp); }
+}
+const SCRAMBLE_SYM = '#%&@$▓▒░';
+function randGlyph(c) {
+  if (/[가-힣]/.test(c)) return String.fromCharCode(0xAC00 + (Math.random() * 11172 | 0));
+  if (/[A-Za-z]/.test(c)) return String.fromCharCode(65 + (Math.random() * 26 | 0));
+  return SCRAMBLE_SYM[Math.random() * SCRAMBLE_SYM.length | 0];
+}
+// every character runs its own short scramble, then settles on the real text
+function scramble(el, text, tick = 34) {
+  if (!SET.shake) { el.textContent = text; return Promise.resolve(); }
+  const chars = [...text], left = chars.map(c => /\s/.test(c) ? 0 : 5 + (Math.random() * 10 | 0));
+  return new Promise(res => {
+    const id = setInterval(() => {
+      let done = true;
+      el.textContent = chars.map((c, i) => { if (left[i] > 0) { left[i]--; done = false; return randGlyph(c); } return c; }).join('');
+      if (done) { clearInterval(id); res(); }
+    }, tick);
+  });
+}
+// a focus pull from blur to crisp
+function focusIn(el, delay = 0) {
+  if (!el) return;
+  if (!SET.shake) { el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay, fill: 'both' }); return; }
+  el.animate([{ opacity: 0, filter: 'blur(10px)', transform: 'translateY(8px) scale(1.01)' }, { opacity: 1, filter: 'blur(0px)', transform: 'none' }],
+    { duration: 560, delay, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' });
+}
+// vertical strips close over the screen, the change happens underneath, then they slide down (centre first)
+async function tileWipe(mid) {
+  const box = $('tiles');
+  if (!SET.shake) { mid && mid(); return; }
+  const w = stage.clientWidth, n = Math.max(3, Math.floor(w / 32)), tw = w / n, c = (n - 1) / 2;
+  box.innerHTML = ''; box.hidden = false;
+  const tiles = Array.from({ length: n }, (_, i) => { const t = document.createElement('i'); t.style.left = i * tw + 'px'; t.style.width = tw + 1 + 'px'; t.style.transform = 'translateY(-100%)'; box.appendChild(t); return t; });
+  const ease = 'cubic-bezier(0.45, 0, 0.55, 1)';
+  await Promise.all(tiles.map((t, i) => t.animate([{ transform: 'translateY(-100%)' }, { transform: 'translateY(0)' }], { duration: 300, delay: Math.abs(i - c) * 22, easing: ease, fill: 'forwards' }).finished));
+  mid && mid();
+  await sleep(140);
+  await Promise.all(tiles.map((t, i) => t.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(100%)' }], { duration: 460, delay: Math.abs(i - c) * 40, easing: ease, fill: 'forwards' }).finished));
+  box.hidden = true; box.innerHTML = '';
+}
+function leaveTitle(fn) {
+  SFX.init(); SFX.ding(); clearInterval(tindTimer);
+  tileWipe(() => { titleOn = false; stage.classList.remove('attract'); $('title').classList.add('hide'); $('sheet').classList.add('hide'); fn(); });
+}
+$('tcont').onclick = e => { e.stopPropagation(); const st = SAVE.stage, go = () => leaveTitle(st === 'new' || st === 'tutorial' ? prologue : resume); if (!noticeSeen() && !TEST) { SFX.init(); SFX.button(); openNotice(go); } else go(); };
+let wipeArmed = false;
+$('tnew').onclick = e => {
+  e.stopPropagation(); SFX.init(); SFX.button();
+  if (!wipeArmed) { wipeArmed = true; $('tnew').textContent = '한 번 더 누르면 기록이 지워집니다'; $('tnew').classList.add('warn'); setTimeout(() => { wipeArmed = false; $('tnew').textContent = '처음부터'; $('tnew').classList.remove('warn'); }, 3000); return; }
+  wipeArmed = false; wipeSave(); leaveTitle(prologue);
+};
+// five quick taps on the logo reveal the test menu (also #test in the address)
+let logoTaps = [];
+$('tlogo').addEventListener('click', e => {
+  e.stopPropagation(); const now = performance.now();
+  logoTaps = logoTaps.filter(t => now - t < 2000).concat(now);
+  if (logoTaps.length >= 5) { logoTaps = []; $('ttest').classList.remove('hide'); SFX.init(); SFX.bell(); toast('테스트 메뉴가 열렸다.'); }
+});
+$('ttest').onclick = e => { e.stopPropagation(); SFX.init(); SFX.button(); openTest(); };
+$('trecords').onclick = e => { e.stopPropagation(); SFX.init(); SFX.button(); openRecords(); };
+$('tset').onclick = e => { e.stopPropagation(); SFX.init(); SFX.button(); openSettings(); };
+let sheetDone = null;
+$('shclose').onclick = e => { e.stopPropagation(); SFX.button(); $('sheet').classList.add('hide'); $('shclose').textContent = '닫기'; const f = sheetDone; sheetDone = null; if (f) f(); };
+// read once before the first ride; reopened any time from the title
+const NOTICE_KEY = 'elevator.notice.v1';
+const NOTICE = `<ol class="notice">
+<li><b>2차 창작</b><br>「페르소나5」의 비공식 팬게임입니다. 아틀러스·세가와는 관계가 없으며, 무료로 공개합니다.</li>
+<li><b>원작 스포일러</b><br>「페르소나5 더 로열」 3학기 결말과 관련된 내용이 포함되어 있습니다. 아직 플레이하지 않으셨다면 주의해 주십시오.</li>
+<li><b>깜빡임·화면 효과</b><br>조명이 깜빡이거나 화면이 지글거리고 흔들리는 연출이 있습니다. 흔들림은 [설정]에서 끌 수 있습니다.</li>
+<li><b>공포 표현</b><br>피를 연상시키는 붉은 물, 마네킹, 갑자기 다가오는 연출과 갑작스러운 소리가 있습니다. 점프스케어(갑자기 튀어나와 놀라게 하는 장면)는 없습니다.</li>
+<li><b>플레이 환경</b><br>휴대폰 세로 화면에서, 소리를 켜고 이어폰을 착용한 채 플레이하시기를 권장합니다. 첫 탈출까지 10~20분 정도 소요됩니다.</li>
+<li><b>저장</b><br>진행 상황은 현재 사용 중인 브라우저에만 저장됩니다. 시크릿 모드에서 플레이하거나 브라우저 데이터를 삭제하면 사라집니다.</li>
+</ol>`;
+const noticeSeen = () => { try { return localStorage.getItem(NOTICE_KEY) === '1'; } catch (e) { return false; } };
+function openNotice(then) {
+  openSheet('탑승 전 안내', NOTICE);
+  if (then) { $('shclose').textContent = '확인하고 탑승한다'; sheetDone = () => { try { localStorage.setItem(NOTICE_KEY, '1'); } catch (e) {} then(); }; }
+}
+$('tnotice').onclick = e => { e.stopPropagation(); SFX.init(); SFX.button(); openNotice(); };
+$('sheet').addEventListener('click', e => e.stopPropagation());
+function openSheet(title, html) { $('shtitle').textContent = title; $('shbody').innerHTML = html; $('sheet').classList.remove('hide'); }
+function dexSummary() {
+  const items = runFound.map(id => `<li>${runNew.has(id) ? '<b>NEW</b> ' : ''}${WHY[id]}</li>`).join('');
+  return (runFound.length ? `<p class="dexh">이번 운행에서 찾은 이상현상 ${runFound.length}</p><ul>${items}</ul>` : `<p class="dexh">이번 운행에서 찾은 이상현상 없음</p>`)
+    + `<p class="dexp">이상현상 기록 ${G.found.length} / ${DEX().length}</p>`;
+}
+// unlocked by catching every anomaly: the attendant, before the first run
+const LAST_REC = `(지지직거리는 잡음. 문이 닫히는 소리.)
+
+……여긴 어디지. 이 우스꽝스러운 옷은 또 뭐고.
+……아무도 없나. 표시기는 10층에서 움직이질 않고, 버튼도 먹통이야.
+벽에 붙은 이건…… 수칙?
+……하. '어떤 일이 있어도, 안내원과 함께 계십시오'라니.
+……누구 장난인지는 몰라도, 취미 한번 더럽게 고약하군.
+
+(띵—. 10층 문이 열리는 소리.)
+
+……어서 오십시오, 손님.`;
+function openRecords() {
+  const rows = ENDINGS.map(en => SAVE.endings.includes(en.id)
+    ? `<div class="erow"><b>${en.name}</b><small>${en.hint}</small></div>`
+    : `<div class="erow locked"><b>???</b><small>아직 보지 못한 결말</small></div>`).join('');
+  const dex = DEX().map((id, i) => G.found.includes(id) ? `<li class="got">${WHY[id]}</li>`
+    : G.missed.includes(id) ? `<li class="miss">${WHY[id]} <small>놓침</small></li>` : `<li class="lock">???</li>`).join('');
+  openSheet('기록', `<h4 class="sh4">엔딩 ${SAVE.endings.length} / ${ENDINGS.length}</h4><div>${rows}</div>
+    <h4 class="sh4">이상현상 ${G.found.length} / ${DEX().length}</h4><p class="dexnote">비상벨로 맞힌 이상현상이 기록돼요. 놓친 것은 회색으로 남아요.</p><ol class="dexlist">${dex}</ol>
+    <h4 class="sh4">남겨진 기록</h4>${DEX().every(id => G.found.includes(id))
+      ? `<details class="lastrec"><summary>기록 49 · 10F, 첫 운행 전</summary><p>${LAST_REC}</p></details>`
+      : `<div class="erow locked"><b>???</b><small>이상현상을 모두 찾으면 열리는 기록</small></div>`}
+    <p style="margin:12px 0 0;color:#8b8c94;font-size:12px">게임오버 ${G.deaths}회</p>`);
+}
+function openSettings() {
+  const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button data-k="${key}" data-v="${v}" class="${String(SET[key]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  openSheet('설정', `
+    <div class="srow"><span>대사 속도</span>${seg('text', [['slow', '느리게'], ['normal', '보통'], ['fast', '빠르게'], ['instant', '즉시']])}</div>
+    <div class="srow"><span>소리</span>${seg('sound', [[true, '켬'], [false, '끔']])}</div>
+    <div class="srow"><span>화면 흔들림</span>${seg('shake', [[true, '켬'], [false, '끔']])}</div>
+    <div class="srow"><span>진동 (지원하는 기기만)</span>${seg('vibe', [[true, '켬'], [false, '끔']])}</div>`);
+  for (const b of $('shbody').querySelectorAll('.seg button')) b.onclick = () => {
+    const k = b.dataset.k, v = k === 'text' ? b.dataset.v : b.dataset.v === 'true';
+    SET[k] = v; saveSettings(); SFX.init(); stage.classList.toggle('calm', !SET.shake);
+    if (k === 'sound' && SFX.muted === v) SFX.toggle();
+    SFX.button(); if (k === 'vibe' && v) buzz(20);
+    openSettings();
+  };
+}
+function testJump(label, fn) {
+  testMark(label); SFX.init(); clearInterval(tindTimer);
+  titleOn = false; stage.classList.remove('attract');
+  for (const id of ['title', 'sheet', 'end', 'silent', 'rules', 'note']) $(id).classList.add('hide');
+  epoch++; cleanup(); SFX.stopAll(0); camAnim = null; cam.fov = 80; cam.updateProjectionMatrix();
+  basement = false; A_ = null; frontScene = 'closed'; applyScene(); resetAkechi(); resetView();
+  $('black').style.transition = 'none'; $('black').style.opacity = 0; canTurn = true;
+  fn();
+}
+function openTest() {
+  const opts = ANOM.map(a => `<option value="${a}">${a}</option>`).join('');
+  openSheet('테스트 메뉴', `
+    <p style="margin:0 0 10px;color:#8b8c94;font-size:12px">여기서 건너뛰면 화면 위에 TEST 표시가 붙고, 이번 접속 동안은 진행·엔딩이 저장되지 않아요. 새로고침하면 원래 기록으로 돌아가요.</p>
+    <div class="tgrid">
+      <button data-j="tutorial">튜토리얼</button><button data-j="ten">10F 본 운행</button>
+      <button data-j="real1">진짜 1F (단서 완료)</button><button data-j="b2">B2F 붉은 층</button>
+      <button data-j="b5">B5F 거울 층</button><button data-j="bx">B??? 반전</button>
+      <button data-j="final">최종 1F</button><button data-j="clues">단서 4개 채우기</button>
+    </div>
+    <div class="srow"><span>이상 현상 지정 → 9F</span><select id="tsel">${opts}</select><div class="tgrid"><button data-j="anom">이 이상 현상으로 9F</button><button data-j="normal9">정상 층으로 9F</button></div></div>`);
+  const fill = () => Object.assign(G, { deaths: Math.max(3, G.deaths), slips: Math.max(3, G.slips), sawCert: true, sawHand: true, sawScratch: true, handNoticed: true });
+  const J = {
+    tutorial: () => prologue(),
+    ten: () => floor(10),
+    real1: () => { fill(); testReal = true; setInd('1F'); firstFloor(epoch); },
+    b2: () => { fill(); callName(); },
+    b5: () => { fill(); basement = true; bCheck = callName; preloadBasement(); floorB5(epoch); },
+    bx: () => { fill(); basement = true; bCheck = callName; preloadBasement(); floorBX(epoch); },
+    final: () => { fill(); finalFloor(); },
+    anom: () => { testForce = $('tsel').value; floor(9); },
+    normal9: () => { testForce = '__none__'; floor(9); },
+  };
+  for (const b of $('shbody').querySelectorAll('[data-j]')) b.onclick = () => {
+    const j = b.dataset.j;
+    if (j === 'clues') { fill(); testMark('fill-clues'); SFX.button(); toast('단서 4개와 게임오버 3회를 채웠다. (저장 안 됨)'); return; }
+    testJump(j + (j === 'anom' ? ':' + $('tsel').value : ''), J[j]);
+  };
+}
+$('again').addEventListener('click', () => tileWipe(() => { $('end').classList.add('hide'); A_ = null; resetAkechi(); resume(); }));
+$('eback').addEventListener('click', () => { SFX.button(); tileWipe(() => showTitle(false)); });
+}
+
+</script>
+</body>
+</html>
